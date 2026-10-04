@@ -1,0 +1,1534 @@
+<!doctype html>
+<html lang="ja">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Study Kit</title>
+<style>
+/* ===== テーマ ===== */
+:root {
+  --bg: #f3f0ff;
+  --bg-pattern: #e9e3ff;
+  --surface: #ffffff;
+  --surface-muted: #f1eefb;
+  --text: #1d1640;
+  --text-muted: #6a6488;
+  --border: #ddd6f5;
+  --primary: #6c4cf1;
+  --primary-dark: #4b30c4;
+  --primary-soft: #ebe5ff;
+  --on-primary: #ffffff;
+  --gold: #f5b301;
+  --gold-dark: #c78f00;
+  --gold-soft: #fff4d1;
+  --correct: #1fa463;
+  --correct-dark: #137d48;
+  --correct-soft: #dcf5e8;
+  --wrong: #e5484d;
+  --wrong-dark: #b8292e;
+  --wrong-soft: #fde4e5;
+  --unknown: #d98a00;
+  --unknown-soft: #fff0d6;
+  --info: #2f80ed;
+  --info-soft: #e1edff;
+  --code-bg: #f1eefb;
+  --shadow: 0 4px 0 rgba(43, 26, 120, 0.12);
+  --radius: 16px;
+}
+@media (prefers-color-scheme: dark) {
+  :root {
+    --bg: #14112b;
+    --bg-pattern: #1a1636;
+    --surface: #1f1b3d;
+    --surface-muted: #2a2550;
+    --text: #eeeaff;
+    --text-muted: #a59fcb;
+    --border: #3a3468;
+    --primary: #8f75ff;
+    --primary-dark: #6247e0;
+    --primary-soft: #2e2760;
+    --on-primary: #ffffff;
+    --gold: #ffc933;
+    --gold-dark: #c99a14;
+    --gold-soft: #3a3115;
+    --correct: #3ccf85;
+    --correct-dark: #1f9a5c;
+    --correct-soft: #173828;
+    --wrong: #ff6b70;
+    --wrong-dark: #c9393e;
+    --wrong-soft: #3d1d22;
+    --unknown: #ffb547;
+    --unknown-soft: #3a2a12;
+    --info: #6aa8ff;
+    --info-soft: #1a2a48;
+    --code-bg: #2a2550;
+    --shadow: 0 4px 0 rgba(0, 0, 0, 0.35);
+  }
+}
+* { box-sizing: border-box; }
+html { -webkit-text-size-adjust: 100%; }
+body {
+  margin: 0;
+  background-color: var(--bg);
+  background-image: radial-gradient(var(--bg-pattern) 2px, transparent 2px);
+  background-size: 22px 22px;
+  color: var(--text);
+  font-family: system-ui, -apple-system, "Segoe UI", "Hiragino Sans", "Noto Sans JP", "Yu Gothic UI", Meiryo, sans-serif;
+  font-size: 16px;
+  line-height: 1.75;
+}
+code, pre { font-family: ui-monospace, "Cascadia Code", Consolas, "Courier New", monospace; font-size: 0.92em; }
+:not(pre) > code { background: var(--code-bg); padding: 0.1em 0.4em; border-radius: 6px; }
+pre { background: #1d1640; color: #eeeaff; padding: 14px 16px; border-radius: 12px; overflow-x: auto; line-height: 1.55; }
+@media (prefers-color-scheme: dark) { pre { background: #0d0b1f; } }
+a { color: var(--primary); }
+button { font: inherit; cursor: pointer; color: inherit; }
+button:disabled { cursor: not-allowed; }
+
+/* ===== 上部バー ===== */
+.topbar {
+  position: sticky; top: 0; z-index: 20;
+  display: flex; align-items: center; gap: 10px; flex-wrap: wrap;
+  padding: 8px 16px;
+  background: var(--surface); border-bottom: 2px solid var(--border);
+}
+.topbar .title { font-weight: 800; margin-right: auto; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; max-width: 40vw; }
+.hud { display: flex; align-items: center; gap: 8px; font-weight: 700; font-size: 0.88rem; }
+.progress-label { white-space: nowrap; color: var(--correct); font-variant-numeric: tabular-nums; }
+.progress-bar { width: 120px; height: 12px; background: var(--surface-muted); border-radius: 99px; overflow: hidden; border: 1px solid var(--border); }
+.progress-bar > span { display: block; height: 100%; background: linear-gradient(90deg, var(--correct), #6fe0a3); transition: width 0.6s ease; }
+.todo-row { display: flex; justify-content: space-between; align-items: center; gap: 10px; flex-wrap: wrap; padding: 10px 0; border-top: 2px solid var(--border); }
+.stage-btn { background: none; border: none; padding: 0; color: inherit; cursor: pointer; }
+.stage-btn:hover .stage-node { transform: translateY(-2px); }
+.challenge { border-color: var(--primary); margin-top: 2em; }
+.status-bar { display: flex; flex-wrap: wrap; align-items: center; gap: 6px 14px; padding: 8px 12px; border: 2px solid var(--border); border-radius: 12px; background: var(--surface); margin-bottom: 0.5em; }
+.challenge p { margin: 10px 0 0; }
+.streak { white-space: nowrap; color: var(--unknown); }
+.timer { font-variant-numeric: tabular-nums; color: var(--text-muted); font-size: 0.85rem; font-weight: 700; }
+.timer.over { color: var(--wrong); }
+.debug-badge { font-size: 0.72rem; background: var(--unknown-soft); color: var(--unknown); padding: 2px 8px; border-radius: 99px; font-weight: 700; }
+.topbar nav { display: flex; gap: 4px; }
+.nav-btn { background: none; border: 2px solid transparent; border-radius: 10px; padding: 3px 12px; font-weight: 700; }
+.nav-btn[aria-current="page"] { border-color: var(--border); background: var(--primary-soft); color: var(--primary); }
+
+main { max-width: 880px; margin: 0 auto; padding: 20px 16px 100px; }
+h1 { font-size: 1.6rem; line-height: 1.35; margin: 0.3em 0; font-weight: 800; }
+h2 { font-size: 1.25rem; line-height: 1.4; margin: 1.6em 0 0.6em; font-weight: 800; }
+h3 { font-size: 1.08rem; margin: 1.5em 0 0.5em; font-weight: 800; }
+h4 { margin: 0 0 0.4em; font-size: 1rem; }
+.muted { color: var(--text-muted); }
+.small { font-size: 0.88em; }
+.center { text-align: center; }
+
+/* ===== 共通部品 ===== */
+.card { background: var(--surface); border: 2px solid var(--border); border-radius: var(--radius); padding: 20px; margin: 16px 0; box-shadow: var(--shadow); position: relative; }
+.btn {
+  border: 2px solid var(--border); background: var(--surface); color: var(--text);
+  border-radius: 14px; padding: 10px 20px; font-weight: 800;
+  box-shadow: 0 4px 0 var(--border); transition: transform 0.06s, box-shadow 0.06s;
+}
+.btn:active:not(:disabled) { transform: translateY(3px); box-shadow: 0 1px 0 var(--border); }
+.btn.primary { background: var(--primary); color: var(--on-primary); border-color: var(--primary-dark); box-shadow: 0 4px 0 var(--primary-dark); }
+.btn.primary:active:not(:disabled) { box-shadow: 0 1px 0 var(--primary-dark); }
+.btn.go { background: var(--correct); color: #fff; border-color: var(--correct-dark); box-shadow: 0 4px 0 var(--correct-dark); }
+.btn.big { font-size: 1.1rem; padding: 14px 28px; }
+.btn.danger { color: var(--wrong); border-color: var(--wrong); box-shadow: 0 4px 0 var(--wrong-soft); }
+.btn:disabled { opacity: 0.45; }
+.btn-row { display: flex; gap: 10px; flex-wrap: wrap; align-items: center; margin-top: 16px; }
+.link-btn { background: none; border: none; padding: 0; color: var(--primary); text-align: left; text-decoration: underline; text-underline-offset: 3px; font-weight: 600; }
+.kbd-hint { font-size: 0.78rem; color: var(--text-muted); }
+.pill { display: inline-block; font-size: 0.75rem; font-weight: 800; letter-spacing: 0.06em; padding: 2px 10px; border-radius: 99px; background: var(--primary-soft); color: var(--primary); }
+.pill.gold { background: var(--gold-soft); color: var(--gold-dark); }
+
+/* ===== ホーム ===== */
+.hero { display: grid; gap: 14px; }
+.hero h1 { margin: 0; }
+.goal-list { margin: 0; padding-left: 0; list-style: none; display: grid; gap: 6px; }
+.goal-list li { display: flex; gap: 8px; }
+.goal-list li::before { content: "🎯"; }
+.stat-row { display: grid; grid-template-columns: repeat(auto-fit, minmax(130px, 1fr)); gap: 10px; }
+.stat { background: var(--surface-muted); border-radius: 12px; padding: 10px 14px; border: 2px solid var(--border); }
+.stat .label { font-size: 0.78rem; color: var(--text-muted); font-weight: 700; }
+.stat .value { font-size: 1.45rem; font-weight: 800; font-variant-numeric: tabular-nums; }
+
+.world { padding-bottom: 14px; }
+.world-head { display: flex; justify-content: space-between; align-items: baseline; gap: 10px; flex-wrap: wrap; }
+.world-title { font-weight: 800; font-size: 1.05rem; }
+.meter { height: 12px; background: var(--surface-muted); border-radius: 99px; overflow: hidden; border: 1px solid var(--border); margin-top: 8px; }
+.meter > span { display: block; height: 100%; background: linear-gradient(90deg, var(--correct), #6fe0a3); }
+.stage-node {
+  width: 58px; height: 58px; border-radius: 50%;
+  display: grid; place-items: center; font-weight: 800; font-size: 1.05rem;
+  border: 3px solid var(--border); background: var(--surface-muted); color: var(--text-muted);
+  box-shadow: 0 4px 0 var(--border);
+}
+.stage-node.learning { background: var(--wrong-soft); border-color: var(--wrong); color: var(--wrong); box-shadow: 0 4px 0 var(--wrong); }
+.stage-node.now { background: var(--unknown); border-color: var(--unknown); color: #fff; box-shadow: 0 4px 0 color-mix(in srgb, var(--unknown) 70%, #000); animation: pulse 1.6s ease-in-out infinite; }
+.stage-node.done { background: var(--gold); border-color: var(--gold-dark); color: #fff; box-shadow: 0 4px 0 var(--gold-dark); }
+.stage-node.next { background: var(--primary); border-color: var(--primary-dark); color: #fff; box-shadow: 0 4px 0 var(--primary-dark); animation: pulse 1.6s ease-in-out infinite; }
+.stage-node.boss { width: 70px; height: 70px; font-size: 1.6rem; flex: none; }
+.stage-node.small { width: 44px; height: 44px; font-size: 0.9rem; border-width: 3px; flex: none; }
+@keyframes pulse { 0%, 100% { transform: scale(1); } 50% { transform: scale(1.08); } }
+
+/* 節カード（ステージマップ）と問題の丸 */
+.section-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(250px, 1fr)); gap: 12px; margin-top: 14px; }
+.section-card { display: grid; gap: 10px; text-align: left; padding: 12px 14px; border: 2px solid var(--border); border-radius: 14px; background: var(--surface); box-shadow: 0 4px 0 var(--border); transition: transform 0.06s; }
+.section-card:hover { border-color: var(--primary); }
+.section-card:active { transform: translateY(3px); box-shadow: 0 1px 0 var(--border); }
+.section-card.is-done { background: color-mix(in srgb, var(--gold) 8%, var(--surface)); border-color: var(--gold); box-shadow: 0 4px 0 var(--gold-dark); }
+.section-card-head { display: flex; align-items: center; gap: 10px; }
+.section-card-title { font-weight: 800; line-height: 1.35; }
+.qdots { display: flex; flex-wrap: wrap; gap: 5px; }
+.qdot { width: 24px; height: 24px; border-radius: 50%; display: grid; place-items: center; font-size: 0.72rem; font-weight: 800; border: 2px solid var(--border); color: var(--text-muted); background: var(--surface); }
+.qdot.closed { background: var(--correct); border-color: var(--correct); color: #fff; }
+.qdot.now { background: var(--unknown); border-color: var(--unknown); color: #fff; animation: pulse 1.6s ease-in-out infinite; }
+.qdot.wait { background: var(--wrong); border-color: var(--wrong); color: #fff; }
+.qdot.mini { width: 14px; height: 14px; display: inline-block; vertical-align: -2px; margin-right: 4px; animation: none; }
+.legend { display: flex; flex-wrap: wrap; gap: 6px 16px; color: var(--text-muted); margin-bottom: 4px; }
+.state-line { display: flex; flex-wrap: wrap; gap: 4px 12px; font-size: 0.82rem; font-weight: 700; margin-top: 6px; }
+.state-text.now { color: var(--unknown); }
+.state-text.wait { color: var(--wrong); }
+.state-text.new { color: var(--text-muted); }
+.state-text.closed { color: var(--correct); }
+.review-card { border-color: var(--unknown); }
+.next-chance { box-shadow: none; text-align: left; }
+.next-text { margin-top: 10px; padding-top: 8px; border-top: 2px dashed currentColor; font-weight: 700; }
+
+
+/* ===== 問題 ===== */
+.q-head { display: flex; justify-content: space-between; align-items: center; gap: 8px; flex-wrap: wrap; }
+.q-dots { display: flex; gap: 5px; }
+.q-dots span { width: 10px; height: 10px; border-radius: 50%; background: var(--border); }
+.q-dots span.done { background: var(--primary); }
+.q-dots span.now { background: var(--gold); transform: scale(1.3); }
+.q-prompt { margin: 14px 0 4px; font-weight: 700; font-size: 1.08rem; }
+.combo { font-weight: 800; color: var(--unknown); font-size: 0.9rem; }
+.options { display: grid; gap: 10px; margin-top: 14px; }
+.option {
+  display: flex; gap: 12px; align-items: center; text-align: left; width: 100%;
+  padding: 12px 14px; border: 2px solid var(--border); border-radius: 14px;
+  background: var(--surface); box-shadow: 0 4px 0 var(--border); font-weight: 600;
+  transition: transform 0.06s;
+}
+.option:hover:not(:disabled) { border-color: var(--primary); }
+.option:active:not(:disabled) { transform: translateY(3px); box-shadow: 0 1px 0 var(--border); }
+.option:disabled { cursor: default; }
+.option[aria-pressed="true"] { border-color: var(--primary); background: var(--primary-soft); box-shadow: 0 4px 0 var(--primary); }
+.option .mark { flex: none; width: 2em; height: 2em; border-radius: 10px; border: 2px solid var(--border); display: grid; place-items: center; font-size: 0.85em; font-weight: 800; }
+.option[aria-pressed="true"] .mark { background: var(--primary); color: #fff; border-color: var(--primary); }
+.option.is-answer { border-color: var(--correct); background: var(--correct-soft); box-shadow: 0 4px 0 var(--correct); }
+.option.is-answer .mark { background: var(--correct); color: #fff; border-color: var(--correct); }
+.option.is-picked-wrong { border-color: var(--wrong); background: var(--wrong-soft); box-shadow: 0 4px 0 var(--wrong); }
+.option.is-picked-wrong .mark { background: var(--wrong); color: #fff; border-color: var(--wrong); }
+.fill-input { width: 100%; font: inherit; font-size: 1.1rem; font-weight: 700; padding: 12px 14px; border: 2px solid var(--border); border-radius: 14px; background: var(--surface); color: var(--text); margin-top: 14px; }
+.fill-input:focus { outline: none; border-color: var(--primary); box-shadow: 0 0 0 3px var(--primary-soft); }
+.order-list { list-style: none; padding: 0; margin: 14px 0 0; display: grid; gap: 10px; }
+.order-item { display: flex; align-items: center; gap: 10px; padding: 10px 12px; border: 2px solid var(--border); border-radius: 14px; background: var(--surface); box-shadow: 0 4px 0 var(--border); font-weight: 600; }
+.order-item .num { flex: none; width: 2em; height: 2em; border-radius: 50%; background: var(--primary-soft); color: var(--primary); display: grid; place-items: center; font-weight: 800; }
+.order-item .text { flex: 1; }
+.order-item .move { display: flex; gap: 4px; }
+.order-item .move button { width: 2.3em; height: 2.3em; border: 2px solid var(--border); background: var(--surface-muted); border-radius: 10px; font-weight: 800; }
+.order-item .move button:disabled { opacity: 0.3; }
+
+.feedback { margin-top: 18px; border-radius: 14px; padding: 14px 18px; border: 2px solid transparent; animation: pop-in 0.25s ease-out; }
+.feedback.correct { background: var(--correct-soft); border-color: var(--correct); }
+.feedback.wrong { background: var(--wrong-soft); border-color: var(--wrong); }
+.feedback.unknown { background: var(--unknown-soft); border-color: var(--unknown); }
+.feedback .verdict { font-weight: 800; font-size: 1.2rem; }
+.feedback.correct .verdict { color: var(--correct); }
+.feedback.wrong .verdict { color: var(--wrong); }
+.feedback.unknown .verdict { color: var(--unknown); }
+.shake { animation: shake 0.4s; }
+@keyframes shake { 0%, 100% { transform: translateX(0); } 20% { transform: translateX(-8px); } 40% { transform: translateX(8px); } 60% { transform: translateX(-5px); } 80% { transform: translateX(5px); } }
+@keyframes pop-in { from { transform: scale(0.95); opacity: 0; } to { transform: scale(1); opacity: 1; } }
+
+.float-text { position: fixed; z-index: 60; pointer-events: none; font-weight: 900; font-size: 1.3rem; color: var(--correct); white-space: nowrap; animation: float-up 1.2s ease-out forwards; }
+@keyframes float-up { from { transform: translate(-50%, 0) scale(0.8); opacity: 0; } 15% { opacity: 1; transform: translate(-50%, -10px) scale(1.15); } to { transform: translate(-50%, -70px) scale(1); opacity: 0; } }
+
+/* ===== 節の開始・結果・セッション結果 ===== */
+.stage-banner { text-align: center; padding: 28px 20px; }
+.stage-banner .big-label { font-size: 0.85rem; font-weight: 900; letter-spacing: 0.2em; color: var(--primary); }
+.stage-banner h2 { margin: 6px 0 10px; font-size: 1.45rem; }
+.stamp { display: inline-block; font-size: 2rem; font-weight: 900; letter-spacing: 0.08em; padding: 4px 18px; border: 4px solid currentColor; border-radius: 14px; transform: rotate(-6deg); animation: stamp 0.45s cubic-bezier(.2, 1.6, .4, 1); }
+.stamp.perfect { color: var(--gold-dark); }
+.stamp.clear { color: var(--primary); }
+@keyframes stamp { from { transform: rotate(-6deg) scale(2.2); opacity: 0; } to { transform: rotate(-6deg) scale(1); opacity: 1; } }
+.miss-card { border-left: 6px solid var(--wrong); }
+.result-tiles { display: grid; grid-template-columns: repeat(auto-fit, minmax(120px, 1fr)); gap: 10px; margin-top: 16px; }
+.result-tiles .stat { text-align: center; }
+
+/* ===== 教科書 ===== */
+.book { display: grid; grid-template-columns: 230px 1fr; gap: 24px; }
+.toc { position: sticky; top: 70px; align-self: start; max-height: calc(100vh - 90px); overflow-y: auto; font-size: 0.92em; }
+.toc ol { padding-left: 0; list-style: none; margin: 0.3em 0 0.9em; }
+.toc li { margin: 2px 0; }
+.toc .chapter-title { font-weight: 800; margin-top: 0.6em; }
+.toc .link-btn { text-decoration: none; display: flex; gap: 6px; align-items: center; }
+.toc .link-btn.active { color: var(--text); font-weight: 800; }
+.toc .dot { width: 9px; height: 9px; border-radius: 50%; background: var(--border); flex: none; }
+.toc .dot.done { background: var(--correct); }
+.toc .dot.now { background: var(--unknown); }
+.toc .dot.learning { background: var(--wrong); }
+.book-body { min-width: 0; }
+.book-body h2:first-of-type { margin-top: 0.2em; }
+.book-body table { border-collapse: collapse; width: 100%; display: block; overflow-x: auto; margin: 1em 0; }
+.book-body th, .book-body td { border: 2px solid var(--border); padding: 8px 12px; text-align: left; vertical-align: top; }
+.book-body th { background: var(--primary-soft); }
+.sources { font-size: 0.86em; padding-left: 0; list-style: none; }
+.sources li { margin: 6px 0; }
+.rank { display: inline-block; min-width: 1.7em; text-align: center; font-size: 0.78em; font-weight: 800; border-radius: 6px; margin-right: 6px; background: var(--primary-soft); color: var(--primary); }
+
+/* ----- 教科書の部品（教材JSONの body で使う。references/textbook-components.md） ----- */
+.sk-goals { background: var(--primary-soft); border: 2px solid var(--primary); border-radius: 14px; padding: 12px 18px; margin: 1em 0; }
+.sk-goals::before { content: "この節でわかること"; display: block; font-weight: 800; color: var(--primary); font-size: 0.85rem; letter-spacing: 0.05em; }
+.sk-goals ul { margin: 4px 0 0; padding-left: 1.3em; }
+
+.sk-callout { border-radius: 14px; padding: 12px 18px 12px 52px; margin: 1.2em 0; position: relative; border: 2px solid; }
+.sk-callout::before { position: absolute; left: 14px; top: 12px; font-size: 1.3rem; line-height: 1.4; }
+.sk-callout::after { position: absolute; left: 52px; top: -0.8em; font-size: 0.75rem; font-weight: 800; padding: 0 8px; border-radius: 99px; color: #fff; }
+.sk-callout p { margin: 0.3em 0; }
+.sk-callout.point { background: var(--gold-soft); border-color: var(--gold); }
+.sk-callout.point::before { content: "💡"; }
+.sk-callout.point::after { content: "ポイント"; background: var(--gold-dark); }
+.sk-callout.warn { background: var(--wrong-soft); border-color: var(--wrong); }
+.sk-callout.warn::before { content: "⚠️"; }
+.sk-callout.warn::after { content: "注意"; background: var(--wrong); }
+.sk-callout.analogy { background: var(--info-soft); border-color: var(--info); }
+.sk-callout.analogy::before { content: "🧩"; }
+.sk-callout.analogy::after { content: "たとえると"; background: var(--info); }
+.sk-callout.tip { background: var(--correct-soft); border-color: var(--correct); }
+.sk-callout.tip::before { content: "🛠️"; }
+.sk-callout.tip::after { content: "実務メモ"; background: var(--correct-dark); }
+
+.sk-terms { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 10px; margin: 1em 0; }
+.sk-terms > div { background: var(--surface); border: 2px solid var(--border); border-radius: 14px; padding: 10px 14px; box-shadow: var(--shadow); }
+.sk-terms dt { font-weight: 800; color: var(--primary); }
+.sk-terms dd { margin: 2px 0 0; font-size: 0.92em; }
+
+.sk-flow { list-style: none; padding: 0; margin: 1.2em 0; display: flex; flex-wrap: wrap; gap: 10px; counter-reset: sk-step; }
+.sk-flow > li { counter-increment: sk-step; flex: 1 1 150px; background: var(--surface); border: 2px solid var(--border); border-radius: 14px; padding: 30px 12px 10px; position: relative; font-size: 0.92em; box-shadow: var(--shadow); }
+.sk-flow > li::before { content: counter(sk-step); position: absolute; top: 6px; left: 10px; width: 1.7em; height: 1.7em; border-radius: 50%; background: var(--primary); color: #fff; display: grid; place-items: center; font-weight: 800; font-size: 0.8rem; }
+.sk-flow > li:not(:last-child)::after { content: "▶"; position: absolute; right: -14px; top: 50%; transform: translateY(-50%); color: var(--primary); font-size: 0.85rem; z-index: 1; }
+
+.sk-nest { border: 2px dashed var(--primary); border-radius: 14px; padding: 26px 12px 12px; margin: 10px 0; position: relative; background: color-mix(in srgb, var(--primary) 5%, transparent); display: flex; flex-wrap: wrap; gap: 10px; align-items: flex-start; }
+.sk-nest > .sk-nest { flex: 1 1 180px; margin: 0; }
+.sk-nest::before { content: attr(data-label); position: absolute; top: 4px; left: 12px; font-size: 0.78rem; font-weight: 800; color: var(--primary); }
+.sk-nest .sk-nest { border-color: var(--correct); background: color-mix(in srgb, var(--correct) 6%, transparent); }
+.sk-nest .sk-nest::before { color: var(--correct-dark); }
+.sk-nest .sk-nest .sk-nest { border-color: var(--unknown); background: color-mix(in srgb, var(--unknown) 7%, transparent); }
+.sk-nest .sk-nest .sk-nest::before { color: var(--unknown); }
+.sk-item { display: inline-block; background: var(--surface); border: 2px solid var(--border); border-radius: 10px; padding: 4px 12px; font-weight: 700; font-size: 0.88em; box-shadow: 0 3px 0 var(--border); }
+.sk-caption { flex-basis: 100%; font-size: 0.82em; color: var(--text-muted); margin: 0; }
+
+.sk-compare { display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 12px; margin: 1.2em 0; }
+.sk-compare > div { background: var(--surface); border: 2px solid var(--border); border-radius: 14px; padding: 12px 16px; box-shadow: var(--shadow); }
+.sk-compare > div:first-child { border-top: 6px solid var(--text-muted); }
+.sk-compare > div:nth-child(2) { border-top: 6px solid var(--primary); }
+.sk-compare > div:nth-child(3) { border-top: 6px solid var(--correct); }
+.sk-compare ul { margin: 0; padding-left: 1.2em; font-size: 0.92em; }
+
+.sk-figure { margin: 1.4em 0; background: var(--surface); border: 2px solid var(--border); border-radius: 14px; padding: 14px; box-shadow: var(--shadow); }
+.sk-figure svg { display: block; width: 100%; height: auto; max-height: 340px; }
+.sk-figure figcaption { font-size: 0.85em; color: var(--text-muted); text-align: center; margin-top: 6px; }
+.sk-figure .sk-fill-primary { fill: var(--primary); }
+.sk-figure .sk-fill-primary-soft { fill: var(--primary-soft); }
+.sk-figure .sk-fill-accent { fill: var(--correct); }
+.sk-figure .sk-fill-accent-soft { fill: var(--correct-soft); }
+.sk-figure .sk-fill-warn { fill: var(--wrong); }
+.sk-figure .sk-fill-muted { fill: var(--surface-muted); }
+.sk-figure .sk-fill-surface { fill: var(--surface); }
+.sk-figure .sk-stroke { stroke: var(--border); }
+.sk-figure .sk-stroke-primary { stroke: var(--primary); }
+.sk-figure .sk-text { fill: var(--text); font-family: inherit; }
+.sk-figure .sk-text-muted { fill: var(--text-muted); font-family: inherit; }
+.sk-figure .sk-text-on { fill: #fff; font-family: inherit; font-weight: 700; }
+
+.sk-badge { display: inline-block; font-family: ui-monospace, Consolas, monospace; font-size: 0.85em; font-weight: 700; padding: 1px 10px; border-radius: 99px; border: 2px solid; }
+.sk-badge.ok { color: var(--correct-dark); border-color: var(--correct); background: var(--correct-soft); }
+.sk-badge.warn { color: var(--unknown); border-color: var(--unknown); background: var(--unknown-soft); }
+.sk-badge.err { color: var(--wrong-dark); border-color: var(--wrong); background: var(--wrong-soft); }
+.sk-badge.info { color: var(--info); border-color: var(--info); background: var(--info-soft); }
+.sk-badge-list { display: grid; gap: 8px; margin: 1em 0; }
+.sk-badge-list > div { display: grid; grid-template-columns: minmax(150px, max-content) 1fr; gap: 12px; align-items: start; background: var(--surface); border: 2px solid var(--border); border-radius: 12px; padding: 8px 12px; }
+
+.sk-summary { background: var(--surface); border: 3px solid var(--gold); border-radius: 14px; padding: 12px 18px; margin: 1.6em 0 1em; }
+.sk-summary::before { content: "⭐ まとめ"; display: block; font-weight: 800; color: var(--gold-dark); }
+.sk-summary ul { margin: 4px 0 0; padding-left: 1.3em; }
+
+/* ===== トースト・紙吹雪 ===== */
+.toast { position: fixed; z-index: 70; left: 50%; bottom: 24px; transform: translateX(-50%); background: var(--text); color: var(--bg); padding: 12px 18px; border-radius: 14px; max-width: calc(100vw - 32px); font-weight: 700; box-shadow: 0 6px 20px rgba(0,0,0,0.25); animation: pop-in 0.2s; }
+#confetti { position: fixed; inset: 0; width: 100%; height: 100%; pointer-events: none; z-index: 50; }
+
+@media (max-width: 720px) {
+  .book { grid-template-columns: 1fr; }
+  .toc { position: static; max-height: none; border-bottom: 2px solid var(--border); padding-bottom: 8px; }
+  .topbar .title { max-width: 100%; flex-basis: 100%; }
+  .stage { width: 88px; }
+  .sk-flow > li:not(:last-child)::after { display: none; }
+}
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after { animation: none !important; transition: none !important; }
+}
+</style>
+</head>
+<body>
+<header class="topbar">
+  <span class="title" id="topbar-title">Study Kit</span>
+  <span class="debug-badge" id="debug-badge" hidden></span>
+  <span class="hud" id="hud"></span>
+  <span class="timer" id="timer" hidden></span>
+  <nav>
+    <button class="nav-btn" data-view="home">ホーム</button>
+    <button class="nav-btn" data-view="settings" aria-label="設定" title="設定（学習履歴）">⚙</button>
+  </nav>
+</header>
+<main id="app"></main>
+<canvas id="confetti" aria-hidden="true"></canvas>
+<div class="toast" id="toast" role="status" hidden></div>
+<input type="file" id="import-file" accept="application/json,.json" hidden>
+
+<script id="study-data" type="application/json">__STUDY_DATA__</script>
+<script>
+"use strict";
+(() => {
+  // ===== 定数 =====
+  const STAGE2_DELAY_DAYS = 1;   // 誤答した日の翌日以降に段階2
+  const STAGE3_DELAY_DAYS = 3;   // 段階2で正解した日の3日後以降に段階3
+  const PROGRESS_VERSION = 1;
+  const FINAL_EXAM_ID = "final";
+
+  // 演出（学習エンジンの判定には使わない）
+  const PRAISE = ["ナイス！", "お見事！", "その調子！", "完璧！", "さすが！"];
+
+  const app = document.getElementById("app");
+
+  // ===== 教材データ =====
+  let content;
+  try {
+    content = JSON.parse(document.getElementById("study-data").textContent);
+  } catch (error) {
+    app.innerHTML = "<p>教材データを読み込めません。scripts/build_html.py で教材JSONを埋め込んだHTMLを開いてください。</p>";
+    return;
+  }
+
+  const STORAGE_KEY = "study-kit:" + content.meta.id;
+  const sectionById = new Map();
+  const chapterBySectionId = new Map();
+  const questionById = new Map();
+  const sectionIdByQuestionId = new Map(); // 総合演習の問題は FINAL_EXAM_ID
+  const factById = new Map((content.factsheet || []).map((fact) => [fact.id, fact]));
+  const finalExamQuestions = content.finalExam || [];
+
+  for (const chapter of content.chapters) {
+    for (const section of chapter.sections) {
+      sectionById.set(section.id, section);
+      chapterBySectionId.set(section.id, chapter);
+      for (const question of section.questions) {
+        questionById.set(question.id, question);
+        sectionIdByQuestionId.set(question.id, section.id);
+      }
+    }
+  }
+  for (const question of finalExamQuestions) {
+    questionById.set(question.id, question);
+    sectionIdByQuestionId.set(question.id, FINAL_EXAM_ID);
+  }
+  const orderedSections = content.chapters.flatMap((chapter) => chapter.sections);
+
+  // ===== 日付（端末のローカル日付。?today=YYYY-MM-DD で検証用に上書きできる） =====
+  const debugToday = new URLSearchParams(location.search).get("today");
+
+  function toDateString(date) {
+    const pad = (n) => String(n).padStart(2, "0");
+    return `${date.getFullYear()}-${pad(date.getMonth() + 1)}-${pad(date.getDate())}`;
+  }
+  function today() {
+    if (debugToday && /^\d{4}-\d{2}-\d{2}$/.test(debugToday)) return debugToday;
+    return toDateString(new Date());
+  }
+  function addDays(dateString, days) {
+    const [y, m, d] = dateString.split("-").map(Number);
+    return toDateString(new Date(y, m - 1, d + days));
+  }
+
+  // ===== 学習履歴の保存 =====
+  function createEmptyProgress() {
+    return {
+      version: PROGRESS_VERSION,
+      contentId: content.meta.id,
+      questions: {},
+      settings: {},
+      game: { activeDays: [], bestCombo: 0 },
+    };
+  }
+  function normalizeProgress(saved) {
+    const base = createEmptyProgress();
+    return {
+      ...base,
+      ...saved,
+      questions: saved.questions || {},
+      settings: { ...base.settings, ...saved.settings },
+      game: { ...base.game, ...saved.game },
+    };
+  }
+  function loadProgress() {
+    try {
+      const saved = JSON.parse(localStorage.getItem(STORAGE_KEY));
+      if (saved && saved.contentId === content.meta.id) return normalizeProgress(saved);
+    } catch (error) { /* 読めないときは空の履歴で始める */ }
+    return createEmptyProgress();
+  }
+  let progress = loadProgress();
+
+  function saveProgress() {
+    try {
+      localStorage.setItem(STORAGE_KEY, JSON.stringify(progress));
+    } catch (error) {
+      showToast("学習履歴を保存できませんでした。右上の ⚙ 設定から学習履歴を書き出して控えを取ってください。");
+    }
+  }
+
+  // ===== 問題ごとの状態 =====
+  // status: "new"（未出題） / "learning"（再学習中） / "closed"（学習済み）
+  // stage : 1 = 同じセッションの最後に再出題, 2 = 翌日以降, 3 = 段階2で正解した日の3日後以降
+  function getRecord(questionId) {
+    return progress.questions[questionId] || { status: "new", attempts: 0 };
+  }
+
+  // 段階1の再出題を受けずにセッションが終わった問題は、段階2として扱う
+  function effectiveStage(record, currentSessionId) {
+    if (record.status !== "learning") return null;
+    if (record.stage === 1 && record.sessionId !== currentSessionId) return 2;
+    return record.stage;
+  }
+
+  function applyAnswer(questionId, isCorrect, sessionId) {
+    const record = { ...getRecord(questionId) };
+    const stage = effectiveStage(record, sessionId);
+    record.attempts = (record.attempts || 0) + 1;
+    record.lastAnswered = today();
+
+    const close = () => { record.status = "closed"; delete record.stage; delete record.due; delete record.sessionId; };
+    const restartRelearning = () => {
+      record.status = "learning";
+      record.stage = 1;
+      record.due = addDays(today(), STAGE2_DELAY_DAYS);
+      record.sessionId = sessionId;
+    };
+
+    if (record.status === "new") {
+      isCorrect ? close() : restartRelearning();
+    } else if (stage === 1) {
+      // 解説を読んだ直後の正解はクローズの根拠にしない。正誤にかかわらず段階2へ
+      record.stage = 2;
+      record.due = addDays(today(), STAGE2_DELAY_DAYS);
+    } else if (stage === 2) {
+      if (isCorrect) {
+        record.stage = 3;
+        record.due = addDays(today(), STAGE3_DELAY_DAYS);
+      } else {
+        restartRelearning();
+      }
+    } else if (stage === 3) {
+      isCorrect ? close() : restartRelearning();
+    }
+    progress.questions[questionId] = record;
+    saveProgress();
+    return record;
+  }
+
+  // ===== 完了の判定 =====
+  function countClosed(questions) {
+    return questions.filter((q) => getRecord(q.id).status === "closed").length;
+  }
+  function sectionStatus(section) {
+    const records = section.questions.map((q) => getRecord(q.id));
+    if (records.every((r) => r.status === "closed")) return "done";
+    if (records.some((r) => r.status !== "new")) return "learning";
+    return "new";
+  }
+  function chapterQuestions(chapter) {
+    return chapter.sections.flatMap((section) => section.questions);
+  }
+  function isChapterDone(chapter) {
+    return chapter.sections.every((section) => sectionStatus(section) === "done");
+  }
+  function isFinalExamUnlocked() {
+    return content.chapters.every(isChapterDone);
+  }
+  function isMaterialDone() {
+    return finalExamQuestions.length > 0 && countClosed(finalExamQuestions) === finalExamQuestions.length;
+  }
+  function hasNewQuestions(questions) {
+    return questions.some((q) => getRecord(q.id).status === "new");
+  }
+
+  // ===== 進捗率と連続学習日数 =====
+  // 進捗率 = クローズ済みの問題数 ÷ 全問題数（節の問題＋総合演習）
+  function progressPercent() {
+    const all = [...questionById.values()];
+    return all.length ? Math.floor((countClosed(all) / all.length) * 100) : 0;
+  }
+  function markActiveToday() {
+    const days = progress.game.activeDays;
+    if (days[days.length - 1] !== today()) {
+      days.push(today());
+      progress.game.activeDays = days.slice(-400);
+      saveProgress();
+    }
+  }
+  function dailyStreak() {
+    const days = new Set(progress.game.activeDays);
+    let cursor = days.has(today()) ? today() : addDays(today(), -1);
+    let streak = 0;
+    while (days.has(cursor)) {
+      streak += 1;
+      cursor = addDays(cursor, -1);
+    }
+    return streak;
+  }
+  function renderHud() {
+    const percent = progressPercent();
+    const streak = dailyStreak();
+    const hud = document.getElementById("hud");
+    const items = [
+      el("span", { class: "progress-label", text: `進捗 ${percent}%` }),
+      el("span", { class: "progress-bar", role: "progressbar", "aria-label": "教材全体の進捗", "aria-valuenow": String(percent), "aria-valuemin": "0", "aria-valuemax": "100" }, [el("span", { style: `width:${percent}%` })]),
+    ];
+    if (streak > 0) items.push(el("span", { class: "streak", title: "連続学習日数", text: `🔥 ${streak}日` }));
+    hud.replaceChildren(...items);
+  }
+
+  // ===== 正誤判定 =====
+  function normalizeFillAnswer(text) {
+    return text.normalize("NFKC").toLowerCase().replace(/\s+/g, "");
+  }
+  function isAnswerCorrect(question, response) {
+    if (response === null) return false; // 「不明」
+    switch (question.type) {
+      case "choice":
+      case "predict":
+        return response === question.answer;
+      case "fill":
+        return question.answer.some((accepted) => normalizeFillAnswer(accepted) === normalizeFillAnswer(response));
+      case "order":
+        return response.length === question.answer.length && response.every((item, i) => item === question.answer[i]);
+      default:
+        return false;
+    }
+  }
+  function describeCorrectAnswer(question) {
+    switch (question.type) {
+      case "choice":
+      case "predict":
+        return question.options[question.answer];
+      case "fill":
+        return question.answer.join(" ／ ");
+      case "order":
+        return question.answer.map((item, i) => `${i + 1}. ${item}`).join("\n");
+      default:
+        return "";
+    }
+  }
+
+  // ===== 小さなユーティリティ =====
+  function el(tag, attributes = {}, children = []) {
+    const node = document.createElement(tag);
+    for (const [key, value] of Object.entries(attributes)) {
+      if (value === undefined || value === null || value === false) continue;
+      if (key === "class") node.className = value;
+      else if (key === "html") node.innerHTML = value; // 教材の本文・問題文・解説（スキルが生成した信頼済みHTML）だけに使う
+      else if (key === "text") node.textContent = value;
+      else if (key.startsWith("on")) node.addEventListener(key.slice(2), value);
+      else node.setAttribute(key, value === true ? "" : value);
+    }
+    for (const child of [].concat(children)) {
+      if (child === null || child === undefined || child === false) continue;
+      node.append(child instanceof Node ? child : document.createTextNode(String(child)));
+    }
+    return node;
+  }
+  function shuffled(items) {
+    const copy = items.slice();
+    for (let i = copy.length - 1; i > 0; i--) {
+      const j = Math.floor(Math.random() * (i + 1));
+      [copy[i], copy[j]] = [copy[j], copy[i]];
+    }
+    return copy;
+  }
+  function shuffledAvoiding(items, forbiddenOrder) {
+    if (items.length < 2) return items.slice();
+    let result;
+    do { result = shuffled(items); } while (result.every((item, i) => item === forbiddenOrder[i]));
+    return result;
+  }
+  function randomPick(items) {
+    return items[Math.floor(Math.random() * items.length)];
+  }
+  function formatSeconds(totalSeconds) {
+    const sign = totalSeconds < 0 ? "-" : "";
+    const abs = Math.abs(Math.floor(totalSeconds));
+    return `${sign}${Math.floor(abs / 60)}:${String(abs % 60).padStart(2, "0")}`;
+  }
+  let toastTimer = null;
+  function showToast(message) {
+    const toast = document.getElementById("toast");
+    toast.textContent = message;
+    toast.hidden = false;
+    clearTimeout(toastTimer);
+    toastTimer = setTimeout(() => { toast.hidden = true; }, 3500);
+  }
+  function sectionLabel(sectionId) {
+    if (sectionId === FINAL_EXAM_ID) return "総合演習";
+    return `${chapterBySectionId.get(sectionId).title} ／ ${sectionById.get(sectionId).title}`;
+  }
+  function stageCode(sectionId) {
+    if (sectionId === FINAL_EXAM_ID) return "BOSS";
+    const chapterIndex = content.chapters.indexOf(chapterBySectionId.get(sectionId)) + 1;
+    const sectionIndex = chapterBySectionId.get(sectionId).sections.indexOf(sectionById.get(sectionId)) + 1;
+    return `${chapterIndex}-${sectionIndex}`;
+  }
+
+  // ===== 演出：紙吹雪（クラッカー）と浮き上がる文字 =====
+  const prefersReducedMotion = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+  const confettiCanvas = document.getElementById("confetti");
+  const confettiContext = confettiCanvas.getContext("2d");
+  const CONFETTI_COLORS = ["#6c4cf1", "#f5b301", "#1fa463", "#e5484d", "#2f80ed", "#ff8ad8", "#22d3ee"];
+  const GRAVITY = 0.32;
+  let confettiPieces = [];
+  let confettiRunning = false;
+
+  function resizeConfettiCanvas() {
+    const ratio = window.devicePixelRatio || 1;
+    confettiCanvas.width = innerWidth * ratio;
+    confettiCanvas.height = innerHeight * ratio;
+    confettiContext.setTransform(ratio, 0, 0, ratio, 0, 0);
+  }
+  window.addEventListener("resize", resizeConfettiCanvas);
+  resizeConfettiCanvas();
+
+  // angle: 打ち出す向き（ラジアン。-π/2 が真上）、spread: 広がり
+  function burstConfetti(x, y, { count = 70, angle = -Math.PI / 2, spread = Math.PI / 2.2, power = 13 } = {}) {
+    if (prefersReducedMotion) return;
+    for (let i = 0; i < count; i++) {
+      const direction = angle + (Math.random() - 0.5) * spread;
+      const speed = power * (0.55 + Math.random() * 0.6);
+      confettiPieces.push({
+        x, y,
+        vx: Math.cos(direction) * speed,
+        vy: Math.sin(direction) * speed,
+        rotation: Math.random() * Math.PI,
+        spin: (Math.random() - 0.5) * 0.4,
+        width: 6 + Math.random() * 6,
+        height: 4 + Math.random() * 5,
+        color: randomPick(CONFETTI_COLORS),
+        life: 110 + Math.random() * 50,
+      });
+    }
+    if (!confettiRunning) {
+      confettiRunning = true;
+      requestAnimationFrame(drawConfetti);
+    }
+  }
+  function drawConfetti() {
+    confettiContext.clearRect(0, 0, innerWidth, innerHeight);
+    for (const piece of confettiPieces) {
+      piece.vy += GRAVITY;
+      piece.vx *= 0.985;
+      piece.vy *= 0.985;
+      piece.x += piece.vx;
+      piece.y += piece.vy;
+      piece.rotation += piece.spin;
+      piece.life -= 1;
+      confettiContext.save();
+      confettiContext.globalAlpha = Math.max(0, Math.min(1, piece.life / 40));
+      confettiContext.translate(piece.x, piece.y);
+      confettiContext.rotate(piece.rotation);
+      confettiContext.fillStyle = piece.color;
+      confettiContext.fillRect(-piece.width / 2, -piece.height / 2, piece.width, piece.height * Math.abs(Math.cos(piece.rotation * 2)) + 1);
+      confettiContext.restore();
+    }
+    confettiPieces = confettiPieces.filter((piece) => piece.life > 0 && piece.y < innerHeight + 40);
+    if (confettiPieces.length) {
+      requestAnimationFrame(drawConfetti);
+    } else {
+      confettiRunning = false;
+      confettiContext.clearRect(0, 0, innerWidth, innerHeight);
+    }
+  }
+  // 正解したとき：回答した場所から小さなクラッカー
+  function celebrateAt(element) {
+    const rect = element.getBoundingClientRect();
+    burstConfetti(rect.left + rect.width / 2, rect.top + 10, { count: 60 });
+  }
+  // 節を全問正解・教材の完了：画面の両下からクラッカー
+  function celebrateBig() {
+    burstConfetti(0, innerHeight, { count: 110, angle: -Math.PI / 3, spread: Math.PI / 4, power: 22 });
+    burstConfetti(innerWidth, innerHeight, { count: 110, angle: (-2 * Math.PI) / 3, spread: Math.PI / 4, power: 22 });
+  }
+  function floatText(element, text) {
+    const rect = element.getBoundingClientRect();
+    const float = el("div", { class: "float-text", text, style: `left:${rect.left + rect.width / 2}px;top:${rect.top - 10}px` });
+    document.body.append(float);
+    setTimeout(() => float.remove(), 1300);
+  }
+
+  // ===== 画面の切り替え =====
+  // home: ステージマップ / section: 節のページ（問題への入口と本文） / run: 問題を解いている最中
+  // settings: 設定（学習履歴） / exam: 模擬試験
+  let currentView = "home";
+  let currentSectionId = orderedSections[0] && orderedSections[0].id;
+  let afterRender = null; // 描画後に1回だけ実行する処理（演出など）
+  let keyHandler = null;  // 表示中の画面のキー操作
+
+  function render() {
+    keyHandler = null; // キー操作は描画した画面が設定し直す
+    document.querySelectorAll(".nav-btn").forEach((button) => {
+      button.removeAttribute("aria-current");
+      if (button.dataset.view === currentView) button.setAttribute("aria-current", "page");
+    });
+    app.replaceChildren();
+    if (currentView === "home") renderHome();
+    else if (currentView === "section") renderSectionPage();
+    else if (currentView === "run") renderRun();
+    else if (currentView === "settings") renderSettings();
+    else if (currentView === "exam") renderExam();
+    renderHud();
+    if (afterRender) {
+      const task = afterRender;
+      afterRender = null;
+      requestAnimationFrame(task);
+    } else {
+      window.scrollTo(0, 0);
+    }
+  }
+  function showView(view) {
+    if (currentView === "exam" && view !== "exam" && exam && !exam.finished) {
+      showToast("模擬試験中です。終了してから移動してください。");
+      return;
+    }
+    if (view !== currentView) confettiPieces = []; // 前の画面の紙吹雪を持ち越さない
+    currentView = view;
+    render();
+  }
+  function openSection(sectionId) {
+    currentSectionId = sectionId;
+    showView("section");
+  }
+  document.querySelectorAll(".nav-btn").forEach((button) => {
+    button.addEventListener("click", () => showView(button.dataset.view));
+  });
+
+  // ===== セッションと出題の単位 =====
+  // ページを開いてから閉じるまでが1セッション。段階1（同じセッションの中の再挑戦）はこの ID で判定する
+  const PAGE_SESSION_ID = "s" + Date.now();
+  const sessionStats = { combo: 0 };
+  let run = null; // 問題を解いている最中の1回分（節・総合演習・復習・再挑戦のどれか）
+
+  // ===== 問題ごとの「いま解けるか」 =====
+  // new: 未挑戦 / now: 今すぐ解ける / wait: 再出題日を待っている / closed: クリア
+  const STATE_LABELS = { new: "未挑戦", now: "今すぐ解ける", wait: "待ち", closed: "クリア" };
+
+  function questionState(questionId) {
+    const record = getRecord(questionId);
+    if (record.status === "new") return { state: "new" };
+    if (record.status === "closed") return { state: "closed" };
+    const stage = effectiveStage(record, PAGE_SESSION_ID);
+    if (stage === 1 || record.due <= today()) return { state: "now" };
+    return { state: "wait", date: record.due };
+  }
+  function summarizeStates(questions) {
+    const summary = { new: 0, now: 0, wait: 0, closed: 0, total: questions.length, nextDate: null };
+    for (const question of questions) {
+      const { state, date } = questionState(question.id);
+      summary[state] += 1;
+      if (state === "wait" && (!summary.nextDate || date < summary.nextDate)) summary.nextDate = date;
+    }
+    return summary;
+  }
+  function idsInState(questions, state) {
+    return questions.filter((q) => questionState(q.id).state === state).map((q) => q.id);
+  }
+  function newQuestionIds(questions) {
+    return idsInState(questions, "new");
+  }
+  // 再出題日の表示：明日なら「明日（10/6）」、それ以外は「10/9」
+  function formatDue(date) {
+    const [, month, day] = date.split("-").map(Number);
+    const label = `${month}/${day}`;
+    return date === addDays(today(), 1) ? `明日（${label}）` : label;
+  }
+  function isStageRun(kind) {
+    return kind === "section" || kind === "final";
+  }
+  function runLabel() {
+    return {
+      section: () => `STAGE ${stageCode(run.sectionId)}`,
+      final: () => "👑 総合演習",
+      review: () => "🔁 復習",
+      relearn: () => "🔥 再挑戦",
+    }[run.kind]();
+  }
+
+  // 問題1問を1つの丸で表す。番号入りで、色が状態を表す
+  function questionDots(questions) {
+    return el("span", { class: "qdots" }, questions.map((question, index) => {
+      const { state, date } = questionState(question.id);
+      const title = `問題${index + 1}：${STATE_LABELS[state]}${state === "wait" ? `（${formatDue(date)}から）` : ""}`;
+      return el("span", { class: `qdot ${state}`, title, "aria-label": title, text: state === "closed" ? "✓" : String(index + 1) });
+    }));
+  }
+  function stateLegend() {
+    return el("div", { class: "legend small" }, ["closed", "now", "wait", "new"].map((state) => el("span", {}, [
+      el("span", { class: `qdot ${state} mini` }), STATE_LABELS[state],
+    ])));
+  }
+  // 状態の内訳を1行で（例：未挑戦 3 ・ 今すぐ 1 ・ 待ち 2（10/9から）・ クリア 2/8）
+  function stateSummaryLine(summary) {
+    if (summary.closed === summary.total) return [el("span", { class: "state-text closed", text: "✅ クリア" })];
+    const parts = [];
+    if (summary.now) parts.push(el("span", { class: "state-text now", text: `🔥 今すぐ ${summary.now}` }));
+    if (summary.new) parts.push(el("span", { class: "state-text new", text: `未挑戦 ${summary.new}` }));
+    if (summary.wait) parts.push(el("span", { class: "state-text wait", text: `⏳ 待ち ${summary.wait}（${formatDue(summary.nextDate)}から）` }));
+    parts.push(el("span", { class: "state-text closed", text: `✓ ${summary.closed}/${summary.total}` }));
+    return parts;
+  }
+  function relearnFlowNote() {
+    return el("p", { class: "small muted", text: "間違えた問題は「すぐ再挑戦 → 翌日以降 → そこで正解した3日後以降」と出題し、翌日以降の2回に続けて正解するとクリアです。" });
+  }
+
+  // ===== ホーム（ステージマップ） =====
+  function renderHome() {
+    const meta = content.meta;
+    const allQuestions = [...questionById.values()];
+    const overall = summarizeStates(allQuestions);
+
+    app.append(el("div", { class: "card hero" }, [
+      el("div", {}, [el("span", { class: "pill", text: { 資格: "資格対策", 実務: "実務トレーニング", 教養: "教養" }[meta.purpose] || meta.purpose })]),
+      el("h1", { text: meta.title }),
+      meta.goals && meta.goals.length ? el("ul", { class: "goal-list" }, meta.goals.map((goal) => el("li", { text: goal }))) : null,
+      el("div", { class: "stat-row" }, [
+        stat("🔥 今すぐ解ける", `${overall.now}問`),
+        stat("未挑戦", `${overall.new}問`),
+        stat("✅ クリア", `${overall.closed}／${overall.total}`),
+        stat("連続学習", `${dailyStreak()}日`),
+      ]),
+      isMaterialDone() ? el("p", { class: "center", html: "🏆 <strong>総合演習まですべてクリアしました。この教材は完了です！</strong>" }) : null,
+    ]));
+
+    if (overall.now || overall.wait) app.append(reviewCard(allQuestions, overall));
+
+    app.append(el("h2", { text: "ステージマップ" }));
+    app.append(el("p", { class: "small muted", style: "margin-bottom:4px", text: "読みたい節を選んでください。丸1つが問題1問です。" }));
+    app.append(stateLegend());
+    content.chapters.forEach((chapter, chapterIndex) => {
+      const questions = chapterQuestions(chapter);
+      const closed = countClosed(questions);
+      app.append(el("div", { class: "card world" }, [
+        el("div", { class: "world-head" }, [
+          el("div", {}, [el("span", { class: "pill", text: `WORLD ${chapterIndex + 1}` }), " ", el("span", { class: "world-title", text: chapter.title })]),
+          el("span", { class: "small muted", text: `クリア ${closed}問／全 ${questions.length}問` }),
+        ]),
+        meter(closed, questions.length),
+        el("div", { class: "section-grid" }, chapter.sections.map(sectionCard)),
+      ]));
+    });
+
+    if (finalExamQuestions.length || meta.exam) app.append(bossCard());
+  }
+
+  // 今日の復習：今すぐ解ける問題と、次に解けるようになる日
+  function reviewCard(allQuestions, overall) {
+    const waitingByDate = new Map();
+    for (const question of allQuestions) {
+      const { state, date } = questionState(question.id);
+      if (state === "wait") waitingByDate.set(date, (waitingByDate.get(date) || 0) + 1);
+    }
+    const schedule = [...waitingByDate.entries()].sort(([a], [b]) => (a < b ? -1 : 1))
+      .map(([date, count]) => `${formatDue(date)} ${count}問`).join(" ・ ");
+    return el("div", { class: "card review-card" }, [
+      el("h3", { style: "margin-top:0", text: "📌 復習" }),
+      overall.now
+        ? el("div", { class: "todo-row" }, [
+          el("div", {}, [el("strong", { text: "🔥 今すぐ解ける問題" }), " ", el("span", { class: "muted", text: `${overall.now}問` })]),
+          el("button", { class: "btn go", text: "▶ 復習する", onclick: () => startRun("review") }),
+        ])
+        : el("div", { class: "todo-row" }, [el("span", { text: "今すぐ解ける復習はありません。" })]),
+      schedule ? el("div", { class: "todo-row" }, [el("div", {}, [el("strong", { text: "⏳ 次に解けるようになる日" }), el("div", { class: "small", text: schedule })])]) : null,
+      relearnFlowNote(),
+    ]);
+  }
+
+  function sectionCard(section) {
+    const summary = summarizeStates(section.questions);
+    const done = summary.closed === summary.total;
+    const started = summary.new < summary.total;
+    let nodeClass = done ? "done" : summary.now ? "now" : started ? "learning" : "new";
+    return el("button", { class: `section-card ${done ? "is-done" : ""}`, onclick: () => openSection(section.id), "aria-label": `${section.title}を開く` }, [
+      el("div", { class: "section-card-head" }, [
+        el("span", { class: `stage-node small ${nodeClass}`, text: done ? "★" : stageCode(section.id) }),
+        el("span", { class: "section-card-title", text: section.title }),
+      ]),
+      questionDots(section.questions),
+      el("div", { class: "state-line" }, stateSummaryLine(summary)),
+    ]);
+  }
+
+  function bossCard() {
+    const meta = content.meta;
+    const unlocked = isFinalExamUnlocked();
+    const summary = summarizeStates(finalExamQuestions);
+    const done = finalExamQuestions.length > 0 && summary.closed === summary.total;
+    return el("div", { class: "card world" }, [
+      el("div", { class: "world-head" }, [
+        el("div", {}, [el("span", { class: "pill gold", text: "BOSS" }), " ", el("span", { class: "world-title", text: "総合演習" })]),
+        el("span", { class: "small muted", text: `クリア ${summary.closed}問／全 ${summary.total}問` }),
+      ]),
+      meter(summary.closed, summary.total),
+      el("div", { class: "section-card-head", style: "margin-top:14px" }, [
+        el("span", { class: `stage-node boss ${done ? "done" : unlocked ? "next" : ""}`, text: done ? "🏆" : unlocked ? "👑" : "🔒" }),
+        el("div", {}, [
+          unlocked ? questionDots(finalExamQuestions) : null,
+          el("div", { class: "state-line" }, unlocked ? stateSummaryLine(summary) : [el("span", { class: "state-text new", text: "全ワールドをクリアすると解放されます" })]),
+        ]),
+      ]),
+      el("div", { class: "btn-row" }, [
+        unlocked && summary.new ? el("button", { class: "btn go", text: `👑 総合演習に挑戦（${summary.new}問）`, onclick: () => startRun("final") }) : null,
+        meta.exam ? el("button", { class: "btn", text: `⏱ 模擬試験（${meta.exam.questionCount}問・${meta.exam.minutes}分）`, onclick: startExam }) : null,
+      ]),
+    ]);
+  }
+
+  function stat(label, value) {
+    return el("div", { class: "stat" }, [el("div", { class: "label", text: label }), el("div", { class: "value", text: value })]);
+  }
+  function meter(done, total) {
+    const percent = total ? Math.round((done / total) * 100) : 0;
+    return el("div", { class: "meter", role: "progressbar", "aria-valuenow": String(percent), "aria-valuemin": "0", "aria-valuemax": "100" }, [
+      el("span", { style: `width:${percent}%` }),
+    ]);
+  }
+
+  // ===== 設定（学習履歴の書き出し・読み込み・削除） =====
+  function renderSettings() {
+    const resetButton = el("button", { class: "btn danger", text: "学習履歴を消す" });
+    resetButton.addEventListener("click", () => {
+      if (resetButton.dataset.armed) {
+        progress = createEmptyProgress();
+        saveProgress();
+        run = null;
+        showToast("学習履歴を消しました。");
+        render();
+      } else {
+        resetButton.dataset.armed = "1";
+        resetButton.textContent = "もう一度押すと消えます";
+      }
+    });
+    app.append(el("h1", { text: "⚙ 設定" }));
+    app.append(el("div", { class: "card" }, [
+      el("h3", { style: "margin-top:0", text: "学習履歴" }),
+      el("p", { class: "small muted", text: "学習履歴はこのブラウザにだけ保存されます。ブラウザを変えるときやデータを消す前に、書き出して控えを取ってください。" }),
+      el("div", { class: "btn-row" }, [
+        el("button", { class: "btn", text: "書き出す", onclick: exportProgress }),
+        el("button", { class: "btn", text: "読み込む", onclick: () => document.getElementById("import-file").click() }),
+        resetButton,
+      ]),
+    ]));
+  }
+  function exportProgress() {
+    const blob = new Blob([JSON.stringify(progress, null, 2)], { type: "application/json" });
+    const link = el("a", { href: URL.createObjectURL(blob), download: `study-kit_${content.meta.id}_${today()}.json` });
+    document.body.append(link);
+    link.click();
+    link.remove();
+    URL.revokeObjectURL(link.href);
+  }
+  document.getElementById("import-file").addEventListener("change", async (event) => {
+    const file = event.target.files[0];
+    event.target.value = "";
+    if (!file) return;
+    try {
+      const imported = JSON.parse(await file.text());
+      if (imported.contentId !== content.meta.id) {
+        showToast(`別の教材の履歴です（${imported.contentId}）。読み込みませんでした。`);
+        return;
+      }
+      progress = normalizeProgress(imported);
+      saveProgress();
+      run = null;
+      showToast("学習履歴を読み込みました。");
+      render();
+    } catch (error) {
+      showToast("学習履歴のファイルを読めませんでした。");
+    }
+  });
+
+  // ===== 節のページ（問題への入口と本文） =====
+  function renderSectionPage() {
+    const section = sectionById.get(currentSectionId) || orderedSections[0];
+    const toc = el("nav", { class: "toc", "aria-label": "目次" }, content.chapters.map((chapter) => el("div", {}, [
+      el("div", { class: "chapter-title", text: chapter.title }),
+      el("ol", {}, chapter.sections.map((s) => el("li", {}, [
+        el("button", { class: `link-btn${s.id === section.id ? " active" : ""}`, onclick: () => openSection(s.id) }, [
+          el("span", { class: `dot ${tocDotState(s)}` }), s.title,
+        ]),
+      ]))),
+    ])));
+
+    const sourceItems = (section.sources || []).map((factId) => factById.get(factId)).filter(Boolean).map((fact) => el("li", {}, [
+      el("span", { class: "rank", text: fact.rank }),
+      fact.claim + " ",
+      el("a", { href: fact.url, target: "_blank", rel: "noopener", text: "出典" }),
+    ]));
+
+    const body = el("article", { class: "book-body" }, [
+      el("div", {}, [el("span", { class: "pill", text: `STAGE ${stageCode(section.id)}` }), " ", el("span", { class: "small muted", text: chapterBySectionId.get(section.id).title })]),
+      el("h2", { text: section.title }),
+      sectionStatusBar(section),
+      // インプット（本文）→ アウトプット（問題）の順に並べる
+      el("div", { html: section.body }),
+      challengeCard(section),
+      sourceItems.length ? el("h3", { text: "参考出典" }) : null,
+      sourceItems.length ? el("ul", { class: "sources" }, sourceItems) : null,
+      el("div", { class: "btn-row" }, [nextSectionButton(section)]),
+    ]);
+    app.append(el("div", { class: "book" }, [toc, body]));
+  }
+  // 節のページの先頭に置く、問題の状態の早見（本文を読み直さずに問題へ飛べる）
+  function sectionStatusBar(section) {
+    const summary = summarizeStates(section.questions);
+    return el("div", { class: "status-bar" }, [
+      questionDots(section.questions),
+      el("div", { class: "state-line", style: "margin-top:0" }, stateSummaryLine(summary)),
+      el("a", { class: "small", href: "#", onclick: (event) => {
+        event.preventDefault();
+        document.querySelector(".challenge").scrollIntoView({ behavior: prefersReducedMotion ? "auto" : "smooth" });
+      }, text: "問題へ ↓" }),
+    ]);
+  }
+  function tocDotState(section) {
+    const summary = summarizeStates(section.questions);
+    if (summary.closed === summary.total) return "done";
+    if (summary.now) return "now";
+    return summary.new === summary.total ? "new" : "learning";
+  }
+  // 節のページの末尾（本文のあと）に置く「この節の問題」カード
+  function challengeCard(section) {
+    const summary = summarizeStates(section.questions);
+    const done = summary.closed === summary.total;
+    let message;
+    if (done) message = "🏆 この節はクリア済みです。";
+    else if (summary.new === summary.total) message = "読んだ内容を、問題を解いて確かめましょう。思い出しながら解くと、読み返すより記憶に残ります。";
+    else if (summary.now) message = "🔥 今すぐ解ける問題があります。";
+    else if (summary.wait && !summary.new) message = `⏳ 残りの問題は ${formatDue(summary.nextDate)} から解けるようになります。`;
+    else message = "";
+
+    return el("div", { class: "card challenge" }, [
+      el("div", { class: "world-head" }, [
+        el("strong", { text: "🎮 この節の問題" }),
+        el("span", { class: "small muted", text: `クリア ${summary.closed}問／全 ${summary.total}問` }),
+      ]),
+      questionDots(section.questions),
+      el("div", { class: "state-line" }, stateSummaryLine(summary)),
+      message ? el("p", { class: "small", text: message }) : null,
+      summary.wait ? relearnFlowNote() : null,
+      el("div", { class: "btn-row", style: "margin-top:4px" }, [
+        summary.now ? el("button", { class: "btn go big", text: `🔥 今すぐ解ける問題（${summary.now}問）`, onclick: () => startRun("review", section.id) }) : null,
+        summary.new ? el("button", { class: summary.now ? "btn big" : "btn go big", text: `▶ 未挑戦の問題に挑戦（${summary.new}問）`, onclick: () => startRun("section", section.id) }) : null,
+      ]),
+    ]);
+  }
+  function nextSectionButton(section) {
+    const next = orderedSections[orderedSections.indexOf(section) + 1];
+    return next ? el("button", { class: "btn", text: `次の節：${next.title} →`, onclick: () => openSection(next.id) }) : null;
+  }
+
+  // ===== 問題を解く（1回分） =====
+  // kind: section（節の未挑戦の問題） / final（総合演習の未挑戦の問題）
+  //       review（今すぐ解ける問題。sectionId があればその節だけ） / relearn（直前の回で間違えた問題）
+  function startRun(kind, sectionId = null, explicitIds = null) {
+    const scope = sectionId ? sectionById.get(sectionId).questions : [...questionById.values()];
+    const ids = explicitIds || {
+      section: () => newQuestionIds(scope),
+      final: () => newQuestionIds(finalExamQuestions),
+      review: () => shuffled(idsInState(scope, "now")),
+    }[kind]();
+    if (!ids.length) {
+      showToast("いま解ける問題はありません。");
+      return;
+    }
+    markActiveToday();
+    run = { kind, sectionId, queue: ids, total: ids.length, answeredIds: [], wrongIds: [], answered: 0, correct: 0, closedCount: 0, percentBefore: progressPercent(), step: null };
+    confettiPieces = [];
+    currentView = "run";
+    advanceRun();
+  }
+  function advanceRun() {
+    run.step = run.queue.length ? { kind: "question", questionId: run.queue.shift() } : { kind: "result" };
+    render();
+  }
+  function quitRun() {
+    // 答えなかった問題は、そのままの状態で残る
+    run = null;
+    showView("home");
+  }
+
+  function renderRun() {
+    if (!run) {
+      currentView = "home";
+      renderHome();
+      return;
+    }
+    if (run.step.kind === "question") renderQuestionStep(run.step);
+    else renderRunResult();
+  }
+
+  function renderQuestionStep(step) {
+    const question = questionById.get(step.questionId);
+    if (!step.view) step.view = buildQuestionView(question, getRecord(question.id).attempts > 0);
+
+    const done = run.total - run.queue.length - 1;
+    const dots = el("span", { class: "q-dots", "aria-label": `${done + 1}問目／${run.total}問` },
+      Array.from({ length: run.total }, (_, i) => el("span", { class: i < done ? "done" : i === done ? "now" : "" })));
+
+    app.append(el("div", { class: "card" }, [
+      el("div", { class: "q-head" }, [
+        el("span", { class: "pill", text: runLabel() }),
+        sessionStats.combo >= 2 ? el("span", { class: "combo", text: `🔥 ${sessionStats.combo} COMBO` }) : null,
+        dots,
+      ]),
+      renderQuestionBody(question, step.view, step.result, (response) => submitRunAnswer(step, question, response)),
+      step.result ? el("div", { class: "btn-row" }, [
+        el("button", { class: "btn go big", text: run.queue.length ? "次へ" : "結果を見る", onclick: advanceRun }),
+        el("span", { class: "kbd-hint", text: "Enter で次へ" }),
+      ]) : null,
+    ]));
+    app.append(el("div", { class: "btn-row" }, [el("button", { class: "btn", text: "中断してホームへ", onclick: quitRun })]));
+  }
+
+  // 回答後に「この問題は次にいつ出るか」を1行で伝える
+  function nextChanceText(questionId) {
+    const { state, date } = questionState(questionId);
+    if (state === "closed") return "✅ この問題はクリアです。もう出題しません。";
+    if (state === "now") return "🔥 このあと「再挑戦」ですぐにもう一度解けます（ここで正解しても、翌日以降にもう一度出題します）。";
+    return `⏳ 次は ${formatDue(date)} 以降に出題します。`;
+  }
+
+  function submitRunAnswer(step, question, response) {
+    const isCorrect = isAnswerCorrect(question, response);
+    const before = getRecord(question.id);
+    const after = applyAnswer(question.id, isCorrect, PAGE_SESSION_ID);
+    run.answered += 1;
+    run.answeredIds.push(question.id);
+    if (isCorrect) {
+      run.correct += 1;
+      sessionStats.combo += 1;
+      if (sessionStats.combo > progress.game.bestCombo) {
+        progress.game.bestCombo = sessionStats.combo;
+        saveProgress();
+      }
+    } else {
+      sessionStats.combo = 0;
+      run.wrongIds.push(question.id);
+    }
+
+    const closed = before.status !== "closed" && after.status === "closed";
+    const closedAfterRelearning = closed && before.status === "learning";
+    if (closed) run.closedCount += 1;
+
+    step.result = { response, isCorrect, nextText: nextChanceText(question.id) };
+    afterRender = () => {
+      const feedback = app.querySelector(".feedback");
+      if (!feedback) return;
+      feedback.scrollIntoView({ block: "nearest", behavior: prefersReducedMotion ? "auto" : "smooth" });
+      if (isCorrect) {
+        celebrateAt(feedback);
+        if (closed) floatText(feedback, `進捗 ${progressPercent()}%`);
+      } else {
+        app.querySelector(".card").classList.add("shake");
+      }
+      if (closedAfterRelearning) showToast("🏅 マスター！ つまずいた問題をクリアしました");
+    };
+    render();
+  }
+
+  function renderRunResult() {
+    const perfect = run.wrongIds.length === 0;
+    // 節（総合演習）の全問正解と教材のクリアは、大きなクラッカーで祝う（表示し直したときは繰り返さない）
+    if (!run.celebrated && ((isStageRun(run.kind) && perfect) || (run.kind === "final" && isMaterialDone()))) {
+      run.celebrated = true;
+      afterRender = celebrateBig;
+    }
+
+    const title = {
+      section: () => sectionById.get(run.sectionId).title,
+      final: () => "総合演習",
+      review: () => (run.sectionId ? `復習：${sectionById.get(run.sectionId).title}` : "復習"),
+      relearn: () => "再挑戦",
+    }[run.kind]();
+    let message;
+    if (run.kind === "section") message = perfect ? "全問正解！ この節の内容は身についています。" : "間違えた問題の解説を読み、本文の該当箇所を読み直しましょう。";
+    else message = perfect ? "全問正解！" : "間違えた問題の解説を読んでおきましょう。";
+
+    // この回で答えた問題が、次にいつ解けるか
+    const answered = run.answeredIds.map((id) => questionById.get(id));
+    const summary = summarizeStates(answered);
+    const retryIds = idsInState(answered, "now");
+    const next = run.kind === "section" ? orderedSections[orderedSections.indexOf(sectionById.get(run.sectionId)) + 1] : null;
+
+    const buttons = [];
+    if (retryIds.length) buttons.push(el("button", { class: "btn go big", text: `🔥 今すぐ再挑戦（${retryIds.length}問）`, onclick: () => startRun("relearn", null, shuffled(retryIds)) }));
+    if (run.kind === "section" && !perfect) buttons.push(el("button", { class: "btn", text: "📖 この節の本文を読み直す", onclick: () => openSection(run.sectionId) }));
+    if (run.kind === "section" && perfect && next) buttons.push(el("button", { class: "btn go big", text: `次の節：${next.title} →`, onclick: () => openSection(next.id) }));
+    buttons.push(el("button", { class: "btn primary big", text: "🗺 ホームへ", onclick: () => { run = null; showView("home"); } }));
+
+    const children = [
+      el("div", { class: "center" }, [el("span", { class: `stamp ${perfect ? "perfect" : "clear"}`, text: perfect ? "PERFECT!" : "CLEAR" })]),
+      el("h2", { class: "center", text: title }),
+      el("div", { class: "result-tiles" }, [
+        stat("正解", `${run.correct}／${run.answered}`),
+        stat("✅ クリア", `+${run.closedCount}問`),
+        stat("進捗", `${run.percentBefore}% → ${progressPercent()}%`),
+      ]),
+      el("p", { class: "center", style: "margin-top:14px", text: message }),
+      summary.closed < summary.total ? el("div", { class: "card next-chance" }, [
+        el("strong", { text: "この回の問題の次の出題" }),
+        el("div", { class: "state-line" }, stateSummaryLine(summary)),
+        relearnFlowNote(),
+      ]) : null,
+    ];
+    for (const questionId of run.wrongIds) {
+      const question = questionById.get(questionId);
+      children.push(el("div", { class: "card miss-card" }, [
+        el("div", { class: "q-prompt", style: "margin-top:0", html: question.prompt }),
+        el("div", { class: "small" }, [el("strong", { text: "正解：" }), el("span", { style: "white-space:pre-line", text: describeCorrectAnswer(question) })]),
+        el("div", { class: "small", html: question.explanation }),
+        refLinks(question),
+      ]));
+    }
+    children.push(el("div", { class: "btn-row", style: "justify-content:center" }, buttons));
+    app.append(el("div", { class: "card" }, children));
+    keyHandler = (event) => { if (event.key === "Enter") buttons[0].click(); };
+  }
+
+  function refLinks(question) {
+    const refs = (question.refs || []).filter((id) => sectionById.has(id));
+    if (!refs.length) return null;
+    return el("div", { class: "small", style: "margin-top:8px" }, [
+      "📖 教科書：",
+      ...refs.flatMap((id, i) => [i ? "、" : "", el("button", { class: "link-btn", text: sectionLabel(id), onclick: () => openSection(id) })]),
+    ]);
+  }
+
+  // 出題ごとの表示順。2回目以降は選択肢・並べ替え項目をシャッフルする
+  function buildQuestionView(question, shuffleOptions) {
+    if (question.type === "choice" || question.type === "predict") {
+      const indexes = question.options.map((_, i) => i);
+      return { optionOrder: shuffleOptions ? shuffled(indexes) : indexes, selected: null };
+    }
+    if (question.type === "order") {
+      return { items: shuffleOptions ? shuffledAvoiding(question.options, question.answer) : question.options.slice() };
+    }
+    return { text: "" };
+  }
+
+  // キーボード操作：数字キーで選択肢、Enter で回答・次へ（keyHandler は render の先頭で宣言済み）
+  document.addEventListener("keydown", (event) => {
+    if (!keyHandler || event.isComposing) return;
+    const tag = event.target.tagName;
+    if (tag === "INPUT" || tag === "TEXTAREA" || (tag === "BUTTON" && event.key === "Enter")) return;
+    keyHandler(event);
+  });
+
+  // onSubmit(response) — response は「不明」のとき null
+  function renderQuestionBody(question, view, result, onSubmit, options = {}) {
+    const answered = Boolean(result);
+    const container = el("div", {});
+    container.append(el("div", { class: "q-prompt", html: question.prompt }));
+    if (question.code) container.append(el("pre", {}, [el("code", { text: question.code })]));
+
+    let readResponse;
+    let selectByNumber = null;
+    if (question.type === "choice" || question.type === "predict") {
+      const select = (optionIndex) => {
+        view.selected = optionIndex;
+        optionButtons.forEach((b, i) => b.setAttribute("aria-pressed", String(view.optionOrder[i] === optionIndex)));
+        submitButton.disabled = false;
+      };
+      const optionButtons = view.optionOrder.map((optionIndex, position) => {
+        const classes = ["option"];
+        if (answered && !options.hideAnswer) {
+          if (optionIndex === question.answer) classes.push("is-answer");
+          else if (result.response === optionIndex) classes.push("is-picked-wrong");
+        }
+        return el("button", {
+          class: classes.join(" "),
+          "aria-pressed": String(view.selected === optionIndex),
+          disabled: answered,
+          onclick: () => select(optionIndex),
+        }, [el("span", { class: "mark", text: String(position + 1) }), el("span", { text: question.options[optionIndex] })]);
+      });
+      container.append(el("div", { class: "options" }, optionButtons));
+      readResponse = () => view.selected;
+      selectByNumber = (n) => { if (n >= 1 && n <= view.optionOrder.length) select(view.optionOrder[n - 1]); };
+    } else if (question.type === "fill") {
+      const input = el("input", { class: "fill-input", type: "text", value: answered && result.response !== null ? result.response : view.text, disabled: answered, placeholder: "答えを入力して Enter", "aria-label": "答え", autocomplete: "off", spellcheck: "false" });
+      input.addEventListener("input", () => { view.text = input.value; submitButton.disabled = !input.value.trim(); });
+      input.addEventListener("keydown", (event) => { if (event.key === "Enter" && input.value.trim() && !event.isComposing) submitButton.click(); });
+      container.append(input);
+      readResponse = () => view.text;
+      if (!answered) setTimeout(() => input.focus(), 0);
+    } else if (question.type === "order") {
+      const list = el("ol", { class: "order-list" });
+      const drawOrderList = () => {
+        list.replaceChildren(...view.items.map((item, i) => el("li", { class: "order-item" }, [
+          el("span", { class: "num", text: String(i + 1) }),
+          el("span", { class: "text", text: item }),
+          answered ? null : el("span", { class: "move" }, [
+            el("button", { "aria-label": "上へ", text: "↑", disabled: i === 0, onclick: () => { moveItem(view.items, i, -1); drawOrderList(); } }),
+            el("button", { "aria-label": "下へ", text: "↓", disabled: i === view.items.length - 1, onclick: () => { moveItem(view.items, i, 1); drawOrderList(); } }),
+          ]),
+        ])));
+      };
+      drawOrderList();
+      container.append(list);
+      readResponse = () => view.items.slice();
+    }
+
+    const submitButton = el("button", { class: "btn primary big", text: "回答する", disabled: question.type !== "order" && !(question.type === "fill" && view.text.trim()) && view.selected == null, onclick: () => onSubmit(readResponse()) });
+    if (!answered) {
+      container.append(el("div", { class: "btn-row" }, [
+        submitButton,
+        el("button", { class: "btn", text: "🤔 不明", onclick: () => onSubmit(null) }),
+        el("span", { class: "kbd-hint", text: selectByNumber ? "数字キーで選択・Enter で回答" : "" }),
+      ]));
+      keyHandler = (event) => {
+        if (selectByNumber && /^[1-9]$/.test(event.key)) selectByNumber(Number(event.key));
+        else if (event.key === "Enter" && !submitButton.disabled) submitButton.click();
+      };
+    } else {
+      if (!options.hideAnswer) container.append(renderFeedback(question, result));
+      keyHandler = (event) => {
+        if (event.key !== "Enter") return;
+        const next = [...app.querySelectorAll("button.btn.go")].pop();
+        if (next) next.click();
+      };
+    }
+    return container;
+  }
+  function moveItem(items, index, offset) {
+    const target = index + offset;
+    [items[index], items[target]] = [items[target], items[index]];
+  }
+  function renderFeedback(question, result) {
+    const kind = result.response === null ? "unknown" : result.isCorrect ? "correct" : "wrong";
+    const verdict = {
+      correct: `🎉 正解！ ${randomPick(PRAISE)}`,
+      wrong: "😣 おしい！ ここで覚えよう",
+      unknown: "📘 ここで確認しよう（不正解として扱います）",
+    }[kind];
+    return el("div", { class: `feedback ${kind}` }, [
+      el("div", { class: "verdict", text: verdict }),
+      result.isCorrect ? null : el("div", { class: "small" }, [el("strong", { text: "正解：" }), el("span", { style: "white-space:pre-line", text: describeCorrectAnswer(question) })]),
+      el("div", { class: "small", html: question.explanation }),
+      refLinks(question),
+      result.nextText ? el("div", { class: "next-text small", text: result.nextText }) : null,
+    ]);
+  }
+
+  // ===== 模擬試験（資格トピックのみ。学習履歴には記録しない） =====
+  let exam = null;
+
+  function startExam() {
+    const questions = shuffled([...questionById.values()]).slice(0, content.meta.exam.questionCount);
+    exam = {
+      questions,
+      views: questions.map((q) => buildQuestionView(q, true)),
+      responses: [],
+      index: 0,
+      startedAt: Date.now(),
+      finished: false,
+    };
+    currentView = "exam";
+    render();
+  }
+  function examSecondsLeft() {
+    return content.meta.exam.minutes * 60 - (Date.now() - exam.startedAt) / 1000;
+  }
+  function finishExam() {
+    exam.finished = true;
+    render();
+  }
+  function renderExam() {
+    if (!exam) { showView("home"); return; }
+    if (exam.finished) { renderExamResult(); return; }
+    const question = exam.questions[exam.index];
+    app.append(el("div", { class: "card" }, [
+      el("div", { class: "q-head" }, [el("span", { class: "pill gold", text: "⏱ 模擬試験" }), el("span", { class: "small muted", text: `${exam.index + 1}／${exam.questions.length}問` })]),
+      renderQuestionBody(question, exam.views[exam.index], null, (response) => {
+        exam.responses[exam.index] = response;
+        exam.index += 1;
+        if (exam.index >= exam.questions.length) finishExam();
+        else render();
+      }),
+    ]));
+    app.append(el("div", { class: "btn-row" }, [el("button", { class: "btn", text: "ここで採点する", onclick: finishExam })]));
+  }
+  function renderExamResult() {
+    keyHandler = null;
+    const results = exam.questions.map((q, i) => {
+      const response = i in exam.responses ? exam.responses[i] : null;
+      return { question: q, response, isCorrect: isAnswerCorrect(q, response) };
+    });
+    const correctCount = results.filter((r) => r.isCorrect).length;
+    const rate = Math.round((correctCount / results.length) * 100);
+    const passingRate = content.meta.exam.passingRate;
+    const passed = passingRate ? rate >= passingRate : null;
+    if (passed && !exam.celebrated) { exam.celebrated = true; afterRender = celebrateBig; }
+    app.append(el("div", { class: "card stage-banner" }, [
+      el("div", { class: "big-label", text: "EXAM RESULT" }),
+      passed === null ? null : el("div", {}, [el("span", { class: `stamp ${passed ? "perfect" : "clear"}`, text: passed ? "合格" : "不合格" })]),
+      el("h2", { text: `${results.length}問中 ${correctCount}問正解（${rate}%）` }),
+      passingRate ? el("p", { text: `合格ライン ${passingRate}%` }) : null,
+      el("p", { class: "small muted", text: "模擬試験の結果は学習履歴（クローズの判定）には記録しません。" }),
+      el("div", { class: "btn-row", style: "justify-content:center" }, [el("button", { class: "btn primary big", text: "ホームへ", onclick: () => { exam = null; showView("home"); } })]),
+    ]));
+    const wrong = results.filter((r) => !r.isCorrect);
+    if (wrong.length) app.append(el("h2", { text: "間違えた問題" }));
+    for (const r of wrong) {
+      app.append(el("div", { class: "card miss-card" }, [
+        renderQuestionBody(r.question, buildQuestionView(r.question, false), { response: r.response, isCorrect: false }, () => {}, { hideAnswer: true }),
+        renderFeedback(r.question, { response: r.response, isCorrect: false }),
+      ]));
+    }
+    keyHandler = null;
+  }
+
+  // ===== タイマー表示（模擬試験の残り時間だけ） =====
+  function updateTimer() {
+    const timer = document.getElementById("timer");
+    if (currentView === "exam" && exam && !exam.finished) {
+      const left = examSecondsLeft();
+      timer.hidden = false;
+      timer.textContent = `⏱ ${formatSeconds(left)}`;
+      timer.classList.toggle("over", left < 60);
+      if (left <= 0) { showToast("制限時間になりました。採点します。"); finishExam(); }
+      return;
+    }
+    timer.hidden = true;
+  }
+  setInterval(updateTimer, 1000);
+
+  // ===== 起動 =====
+  document.title = content.meta.title;
+  document.getElementById("topbar-title").textContent = content.meta.title;
+  if (debugToday) {
+    const badge = document.getElementById("debug-badge");
+    badge.hidden = false;
+    badge.textContent = `検証用の日付：${today()}`;
+  }
+  render();
+})();
+</script>
+</body>
+</html>
