@@ -111,7 +111,7 @@ button:disabled { cursor: not-allowed; }
 .nav-btn { background: none; border: 2px solid transparent; border-radius: 10px; padding: 3px 12px; font-weight: 700; }
 .nav-btn[aria-current="page"] { border-color: var(--border); background: var(--primary-soft); color: var(--primary); }
 
-main { max-width: 880px; margin: 0 auto; padding: 20px 16px 100px; }
+main { max-width: 1600px; margin: 0 auto; padding: 20px clamp(16px, 3vw, 40px) 100px; }
 h1 { font-size: 1.6rem; line-height: 1.35; margin: 0.3em 0; font-weight: 800; }
 h2 { font-size: 1.25rem; line-height: 1.4; margin: 1.6em 0 0.6em; font-weight: 800; }
 h3 { font-size: 1.08rem; margin: 1.5em 0 0.5em; font-weight: 800; }
@@ -258,7 +258,7 @@ h4 { margin: 0 0 0.4em; font-size: 1rem; }
 .result-tiles .stat { text-align: center; }
 
 /* ===== 教科書 ===== */
-.book { display: grid; grid-template-columns: 230px 1fr; gap: 24px; }
+.book { display: grid; grid-template-columns: 250px 1fr; gap: 28px; }
 .toc { position: sticky; top: 70px; align-self: start; max-height: calc(100vh - 90px); overflow-y: auto; font-size: 0.92em; }
 .toc ol { padding-left: 0; list-style: none; margin: 0.3em 0 0.9em; }
 .toc li { margin: 2px 0; }
@@ -299,6 +299,10 @@ h4 { margin: 0 0 0.4em; font-size: 1rem; }
 .sk-callout.tip { background: var(--correct-soft); border-color: var(--correct); }
 .sk-callout.tip::before { content: "🛠️"; }
 .sk-callout.tip::after { content: "実務メモ"; background: var(--correct-dark); }
+
+.sk-premise { background: var(--info-soft); border: 2px solid var(--info); border-left-width: 8px; border-radius: 14px; padding: 12px 18px; margin: 1.2em 0; }
+.sk-premise::before { content: "📘 前提：" attr(data-term) " とは"; display: block; font-weight: 800; color: var(--info); margin-bottom: 4px; }
+.sk-premise p { margin: 0.4em 0; }
 
 .sk-terms { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 10px; margin: 1em 0; }
 .sk-terms > div { background: var(--surface); border: 2px solid var(--border); border-radius: 14px; padding: 10px 14px; box-shadow: var(--shadow); }

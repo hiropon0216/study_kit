@@ -24,3 +24,9 @@
 | F-016 | phase の意味：Running は少なくとも1つのコンテナが動いている、Succeeded はすべてのコンテナが正常終了し再起動しない、Failed はすべてのコンテナが終了し少なくとも1つが失敗、Unknown は状態を取得できない | https://kubernetes.io/docs/concepts/workloads/pods/pod-lifecycle/ | S | 2章 Pod のトラブルシューティング ／ 2.1 Pod の状態を読む |
 | F-017 | kubectl get pods の RESTARTS 列はコンテナの再起動回数を示す | https://kubernetes.io/docs/tasks/debug/debug-application/debug-pods/ | S | 2章 Pod のトラブルシューティング ／ 2.1 Pod の状態を読む |
 | F-018 | コンテナが標準出力・標準エラー出力に書いたログは kubectl logs で見られる | https://kubernetes.io/docs/concepts/cluster-administration/logging/ | S | 2章 Pod のトラブルシューティング ／ 2.2 describe と logs で原因を探す |
+| F-019 | Kubernetes はコンテナ化されたワークロードとサービスを管理する、ポータブルで拡張可能なオープンソースのプラットフォームである | https://kubernetes.io/docs/concepts/overview/ | S | 1章 Kubernetes の基本オブジェクト ／ 1.1 Pod |
+| F-020 | Kubernetes は Google が2014年にオープンソース化したプロジェクトで、K8s と略される（K と s の間の8文字を数えた略記） | https://kubernetes.io/docs/concepts/overview/ | S | 1章 Kubernetes の基本オブジェクト ／ 1.1 Pod |
+| F-021 | Docker はアプリケーションを開発・配布・実行するためのオープンなプラットフォームで、アプリをコンテナという隔離された環境で動かす | https://docs.docker.com/get-started/docker-overview/ | S | 1章 Kubernetes の基本オブジェクト ／ 1.1 Pod |
+| F-022 | kubectl は Kubernetes API を使ってクラスタのコントロールプレーンと通信するコマンドラインツールである | https://kubernetes.io/docs/reference/kubectl/ | S | 1章 Kubernetes の基本オブジェクト ／ 1.1 Pod |
+| F-023 | YAML は人が読み書きしやすいデータのシリアライズ（記述）言語である | https://yaml.org/ | S | 1章 Kubernetes の基本オブジェクト ／ 1.1 Pod |
+| F-024 | nginx は HTTP サーバー・リバースプロキシサーバーなどとして動くソフトウェアである | https://nginx.org/en/ | S | 1章 Kubernetes の基本オブジェクト ／ 1.1 Pod |

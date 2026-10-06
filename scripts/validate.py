@@ -6,6 +6,7 @@
   - リンク切れ（refs が存在しない節を指す、sources が存在しない事実IDを指す）
   - 正解の整合性（正解が選択肢にない、並べ替えの正解が項目の並べ替えになっていない）
   - 分量の目安（1節6〜10問、総合演習は章数×2問程度）
+  - 固有名詞の前提の説明（sk-premise）が、その語の初出より後ろに置かれていないか
 
 使い方:
   python validate.py content.json
@@ -30,6 +31,8 @@ FORBIDDEN_HTML_PATTERNS = [
 ]
 STYLE_ATTRIBUTE_PATTERN = re.compile(r"\sstyle\s*=", re.IGNORECASE)
 VISUAL_COMPONENT_PATTERN =re.compile(r'class="[^"]*\b(sk-nest|sk-flow|sk-compare|sk-figure|sk-badge-list|sk-terms)\b|<table\b')
+PREMISE_PATTERN = re.compile(r'<div class="sk-premise"(?: data-term="([^"]*)")?')
+TAG_PATTERN = re.compile(r"<[^>]+>")
 MIN_QUESTIONS_PER_SECTION = 6
 MAX_QUESTIONS_PER_SECTION = 10
 FINAL_EXAM_QUESTIONS_PER_CHAPTER = 2
@@ -105,6 +108,74 @@ def _check_body_components(body, where, report):
         report.warn(where, "style 属性で見た目を上書きしています（見た目は template.html の部品に任せ、どの教材でも同じ見た目にします）")
     if not VISUAL_COMPONENT_PATTERN.search(body):
         report.warn(where, "図や表の部品（sk-nest / sk-flow / sk-compare / sk-figure など）が1つもありません")
+
+
+def _mask_tags(fragment):
+    """タグを同じ長さの空白にして、文字の位置を保ったまま本文の文字だけを残す。"""
+    return TAG_PATTERN.sub(lambda m: " " * len(m.group()), fragment)
+
+
+def _term_pattern(term):
+    """英数字で始まる・終わる語は、別の単語の一部に一致しないようにする（Go と Google など）。"""
+    pattern = re.escape(term)
+    if re.match(r"[A-Za-z0-9]", term):
+        pattern = r"(?<![A-Za-z0-9])" + pattern
+    if re.search(r"[A-Za-z0-9]$", term):
+        pattern += r"(?![A-Za-z0-9])"
+    return re.compile(pattern)
+
+
+def _question_text(question):
+    if not isinstance(question, dict):
+        return ""
+    options = question.get("options") or []
+    parts = [question.get("prompt"), question.get("code"), question.get("explanation"), *options]
+    return _mask_tags(" ".join(str(part) for part in parts if isinstance(part, str)))
+
+
+def _check_premises(chapters, final_exam, report):
+    """固有名詞の前提の説明（references/proper-nouns.md）が、その語の初出までに置かれているかを調べる。
+
+    教材を学習順に並べた文字列（節の本文 → 節の問題 → … → 総合演習）の中で、
+    sk-premise の位置よりも前にその語が出てきていたら警告する。
+    """
+    texts = []  # (場所, 文字列)
+    premises = []  # (語, 場所, texts の番号, 文字位置)
+    for chapter in chapters:
+        if not isinstance(chapter, dict):
+            continue
+        for section in chapter.get("sections", []) or []:
+            if not isinstance(section, dict) or not isinstance(section.get("body"), str):
+                continue
+            where = f"節 {section.get('id')}"
+            body = section["body"]
+            for match in PREMISE_PATTERN.finditer(body):
+                term = (match.group(1) or "").strip()
+                if not term:
+                    report.warn(where, 'sk-premise に data-term（説明する固有名詞）がありません')
+                    continue
+                premises.append((term, where, len(texts), match.start()))
+            texts.append((where, _mask_tags(body)))
+            for question in section.get("questions", []) or []:
+                texts.append((f"{where} の問題", _question_text(question)))
+    for question in final_exam:
+        texts.append(("総合演習", _question_text(question)))
+
+    first_premise = {}
+    for term, where, text_index, position in premises:
+        if term in first_premise:
+            report.warn(where, f"「{term}」の sk-premise が {first_premise[term][0]} と重複しています（2回目以降は繰り返しません）")
+            continue
+        first_premise[term] = (where, text_index, position)
+
+    for term, (where, text_index, position) in first_premise.items():
+        pattern = _term_pattern(term)
+        for index in range(text_index + 1):
+            text_where, text = texts[index]
+            match = pattern.search(text)
+            if match and (index < text_index or match.start() < position):
+                report.warn(where, f"「{term}」は {text_where} で先に出てきます。前提の説明（sk-premise）は初出の節の、初出の文より前に置いてください")
+                break
 
 
 def _check_question(question, where, section_ids, report):
@@ -265,6 +336,8 @@ def validate(content):
     expected = len(chapters) * FINAL_EXAM_QUESTIONS_PER_CHAPTER
     if chapters and not expected * 0.5 <= len(final_exam) <= expected * 1.5:
         report.warn("finalExam", f"総合演習が {len(final_exam)}問です（目安は章数×2 = {expected}問程度）")
+
+    _check_premises(chapters, final_exam, report)
 
     used_fact_ids = {
         fact_id

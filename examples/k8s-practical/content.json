@@ -20,11 +20,17 @@
         {
           "id": "ch1-s1",
           "title": "1.1 Pod",
-          "body": "<div class=\"sk-goals\"><ul><li>Pod とコンテナの関係</li><li>同じ Pod のコンテナどうしが通信する方法</li><li>実務で Pod を直接作らない理由</li></ul></div>\n<p>Kubernetes でアプリを動かすとき、最小の単位になるのが <strong>Pod</strong> です。Docker ではコンテナを1つずつ起動しましたが、Kubernetes ではコンテナを Pod という入れ物に入れて動かします。</p>\n<div class=\"sk-compare\"><div><h4>Docker（これまで）</h4><ul><li>コンテナを1つずつ起動する</li><li><code>docker run</code> で起動する</li></ul></div><div><h4>Kubernetes（これから）</h4><ul><li>1つ以上のコンテナを Pod にまとめて起動する</li><li>マニフェスト（YAML）を書いて <code>kubectl apply</code> する</li></ul></div></div>\n<p>Pod は1つ以上のコンテナのグループです。同じ Pod に入ったコンテナは、ストレージとネットワークを共有します。ネットワークを共有しているので、同じ Pod の中のコンテナどうしは <code>localhost</code> で通信できます。</p>\n<div class=\"sk-nest\" data-label=\"Pod\"><span class=\"sk-item\">コンテナ: web</span><span class=\"sk-item\">コンテナ: log-agent</span><p class=\"sk-caption\">ネットワークとストレージを共有する。web と log-agent は localhost で通信できる</p></div>\n<div class=\"sk-callout analogy\"><p>Pod は1つの部屋、コンテナは部屋の中にいる人のようなものです。同じ部屋にいる人は、住所を調べなくても声をかければ話せます。</p></div>\n<p>Pod の定義は次のような YAML で書きます。</p>\n<pre><code>apiVersion: v1\nkind: Pod\nmetadata:\n  name: web\nspec:\n  containers:\n  - name: web\n    image: nginx:1.27\n    ports:\n    - containerPort: 80</code></pre>\n<div class=\"sk-callout warn\"><p>実務で Pod を直接作ることはあまりありません。Pod は使い捨てを前提にした比較的短命なものとして設計されており、消えても自動では作り直されないためです。</p></div>\n<p>通常は、次の節で扱う Deployment のようなワークロードリソースに Pod を作らせます。</p>\n<div class=\"sk-summary\"><ul><li>Pod は Kubernetes で作成・管理できる最小のデプロイ単位</li><li>同じ Pod のコンテナは localhost で通信できる</li><li>Pod は直接作らず、Deployment などに作らせる</li></ul></div>",
+          "body": "<div class=\"sk-goals\"><ul><li>Pod とコンテナの関係</li><li>同じ Pod のコンテナどうしが通信する方法</li><li>実務で Pod を直接作らない理由</li></ul></div>\n<div class=\"sk-premise\" data-term=\"Kubernetes\"><p><strong>何か：</strong>コンテナで動くアプリ（ワークロード）とサービスを管理する、オープンソースのソフトウェアです。K と s の間に8文字あるので K8s とも書きます。</p><p><strong>誰が作ったか：</strong>Google が開発し、2014年にオープンソースとして公開しました。</p><p><strong>なぜ必要か：</strong>コンテナが増えると、どのサーバーでどのコンテナを動かすかを人手で管理するのが難しくなります。Kubernetes はその管理をまとめて引き受けます。</p><p><strong>この教材との関係：</strong>この教材全体の主役です。以降に出てくる Pod や Deployment は、すべて Kubernetes が管理する仕組みです。</p></div><div class=\"sk-premise\" data-term=\"Docker\"><p><strong>何か：</strong>アプリをコンテナという隔離された環境で開発・配布・実行するためのソフトウェアです。</p><p><strong>誰が作ったか：</strong>Docker 社が提供しています。</p><p><strong>なぜ必要か：</strong>アプリと動かすのに必要なものをコンテナにまとめると、どの環境でも同じように動かせます。</p><p><strong>この教材との関係：</strong>Kubernetes が動かすのも、Docker と同じ形式のコンテナです。この教材では、Docker でコンテナを動かしたことがある前提で、その違いから説明します。</p></div>\n<p>Kubernetes でアプリを動かすとき、最小の単位になるのが <strong>Pod</strong> です。Docker ではコンテナを1つずつ起動しましたが、Kubernetes ではコンテナを Pod という入れ物に入れて動かします。</p>\n<div class=\"sk-premise\" data-term=\"YAML\"><p><strong>何か：</strong>人が読み書きしやすいように作られた、データを書くための言語（ファイル形式）です。字下げで階層を表します。</p><p><strong>なぜ必要か：</strong>設定を人が読める文字で書いておけば、ファイルとして保存したり見直したりできます。</p><p><strong>この教材との関係：</strong>Kubernetes では、作りたいもの（Pod など）の定義を YAML で書きます。このファイルをマニフェストと呼びます。</p></div><div class=\"sk-premise\" data-term=\"kubectl\"><p><strong>何か：</strong>Kubernetes を操作するためのコマンドラインツールです。</p><p><strong>誰が作ったか：</strong>Kubernetes プロジェクトが Kubernetes 本体と一緒に提供しています。</p><p><strong>なぜ必要か：</strong>kubectl は、Kubernetes の中でサーバー群（クラスタ）全体を管理する部分に、人の指示を伝えます。人はこのコマンドを通して Kubernetes を操作します。</p><p><strong>この教材との関係：</strong>マニフェストを適用する <code>kubectl apply</code> や、状態を調べる <code>kubectl get</code> など、以降の節でくり返し使います。</p></div><div class=\"sk-premise\" data-term=\"nginx\"><p><strong>何か：</strong>Web サーバーとして広く使われているソフトウェアです。</p><p><strong>この教材との関係：</strong>この教材では、コンテナで動かすアプリの例として使います。下の YAML の <code>image: nginx:1.27</code> は「nginx のバージョン 1.27 のコンテナイメージを使う」という意味です。</p></div>\n<div class=\"sk-compare\"><div><h4>Docker（これまで）</h4><ul><li>コンテナを1つずつ起動する</li><li><code>docker run</code> で起動する</li></ul></div><div><h4>Kubernetes（これから）</h4><ul><li>1つ以上のコンテナを Pod にまとめて起動する</li><li>マニフェスト（YAML）を書いて <code>kubectl apply</code> する</li></ul></div></div>\n<p>Pod は1つ以上のコンテナのグループです。同じ Pod に入ったコンテナは、ストレージとネットワークを共有します。ネットワークを共有しているので、同じ Pod の中のコンテナどうしは <code>localhost</code> で通信できます。</p>\n<div class=\"sk-nest\" data-label=\"Pod\"><span class=\"sk-item\">コンテナ: web</span><span class=\"sk-item\">コンテナ: log-agent</span><p class=\"sk-caption\">ネットワークとストレージを共有する。web と log-agent は localhost で通信できる</p></div>\n<div class=\"sk-callout analogy\"><p>Pod は1つの部屋、コンテナは部屋の中にいる人のようなものです。同じ部屋にいる人は、住所を調べなくても声をかければ話せます。</p></div>\n<p>Pod の定義は次のような YAML で書きます。</p>\n<pre><code>apiVersion: v1\nkind: Pod\nmetadata:\n  name: web\nspec:\n  containers:\n  - name: web\n    image: nginx:1.27\n    ports:\n    - containerPort: 80</code></pre>\n<div class=\"sk-callout warn\"><p>実務で Pod を直接作ることはあまりありません。Pod は使い捨てを前提にした比較的短命なものとして設計されており、消えても自動では作り直されないためです。</p></div>\n<p>通常は、次の節で扱う Deployment のようなワークロードリソースに Pod を作らせます。</p>\n<div class=\"sk-summary\"><ul><li>Pod は Kubernetes で作成・管理できる最小のデプロイ単位</li><li>同じ Pod のコンテナは localhost で通信できる</li><li>Pod は直接作らず、Deployment などに作らせる</li></ul></div>",
           "sources": [
             "F-001",
             "F-002",
-            "F-003"
+            "F-003",
+            "F-019",
+            "F-020",
+            "F-021",
+            "F-022",
+            "F-023",
+            "F-024"
           ],
           "questions": [
             {
@@ -778,6 +784,42 @@
       "id": "F-018",
       "claim": "コンテナが標準出力・標準エラー出力に書いたログは kubectl logs で見られる",
       "url": "https://kubernetes.io/docs/concepts/cluster-administration/logging/",
+      "rank": "S"
+    },
+    {
+      "id": "F-019",
+      "claim": "Kubernetes はコンテナ化されたワークロードとサービスを管理する、ポータブルで拡張可能なオープンソースのプラットフォームである",
+      "url": "https://kubernetes.io/docs/concepts/overview/",
+      "rank": "S"
+    },
+    {
+      "id": "F-020",
+      "claim": "Kubernetes は Google が2014年にオープンソース化したプロジェクトで、K8s と略される（K と s の間の8文字を数えた略記）",
+      "url": "https://kubernetes.io/docs/concepts/overview/",
+      "rank": "S"
+    },
+    {
+      "id": "F-021",
+      "claim": "Docker はアプリケーションを開発・配布・実行するためのオープンなプラットフォームで、アプリをコンテナという隔離された環境で動かす",
+      "url": "https://docs.docker.com/get-started/docker-overview/",
+      "rank": "S"
+    },
+    {
+      "id": "F-022",
+      "claim": "kubectl は Kubernetes API を使ってクラスタのコントロールプレーンと通信するコマンドラインツールである",
+      "url": "https://kubernetes.io/docs/reference/kubectl/",
+      "rank": "S"
+    },
+    {
+      "id": "F-023",
+      "claim": "YAML は人が読み書きしやすいデータのシリアライズ（記述）言語である",
+      "url": "https://yaml.org/",
+      "rank": "S"
+    },
+    {
+      "id": "F-024",
+      "claim": "nginx は HTTP サーバー・リバースプロキシサーバーなどとして動くソフトウェアである",
+      "url": "https://nginx.org/en/",
       "rank": "S"
     }
   ]
