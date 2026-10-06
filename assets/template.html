@@ -426,6 +426,7 @@ h4 { margin: 0 0 0.4em; font-size: 1rem; }
   const sectionIdByQuestionId = new Map(); // 総合演習の問題は FINAL_EXAM_ID
   const factById = new Map((content.factsheet || []).map((fact) => [fact.id, fact]));
   const finalExamQuestions = content.finalExam || [];
+  const FINAL_RUN_SIZE = 10; // 総合演習は問題数が多い（節の数×10問以上）ので、1回分を10問で区切る
 
   for (const chapter of content.chapters) {
     for (const section of chapter.sections) {
@@ -1001,7 +1002,7 @@ h4 { margin: 0 0 0.4em; font-size: 1rem; }
         ]),
       ]),
       el("div", { class: "btn-row" }, [
-        unlocked && summary.new ? el("button", { class: "btn go", text: `👑 総合演習に挑戦（${summary.new}問）`, onclick: () => startRun("final") }) : null,
+        unlocked && summary.new ? el("button", { class: "btn go", text: `👑 総合演習に挑戦（${Math.min(summary.new, FINAL_RUN_SIZE)}問／未挑戦 ${summary.new}問）`, onclick: () => startRun("final") }) : null,
         meta.exam ? el("button", { class: "btn", text: `⏱ 模擬試験（${meta.exam.questionCount}問・${meta.exam.minutes}分）`, onclick: startExam }) : null,
       ]),
     ]);
@@ -1177,7 +1178,7 @@ h4 { margin: 0 0 0.4em; font-size: 1rem; }
     const scope = sectionId ? sectionById.get(sectionId).questions : [...questionById.values()];
     const ids = explicitIds || {
       section: () => newQuestionIds(scope),
-      final: () => newQuestionIds(finalExamQuestions),
+      final: () => newQuestionIds(finalExamQuestions).slice(0, FINAL_RUN_SIZE),
       review: () => shuffled(idsInState(scope, "now")),
     }[kind]();
     if (!ids.length) {

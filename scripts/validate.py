@@ -5,7 +5,7 @@
   - ID の重複
   - リンク切れ（refs が存在しない節を指す、sources が存在しない事実IDを指す）
   - 正解の整合性（正解が選択肢にない、並べ替えの正解が項目の並べ替えになっていない）
-  - 分量の目安（1節6〜10問、総合演習は章数×2問程度）
+  - 分量の目安（1節6〜10問、総合演習は節の数×10問以上）
   - 固有名詞の前提の説明（sk-premise）が、その語の初出より後ろに置かれていないか
 
 使い方:
@@ -35,7 +35,7 @@ PREMISE_PATTERN = re.compile(r'<div class="sk-premise"(?: data-term="([^"]*)")?'
 TAG_PATTERN = re.compile(r"<[^>]+>")
 MIN_QUESTIONS_PER_SECTION = 6
 MAX_QUESTIONS_PER_SECTION = 10
-FINAL_EXAM_QUESTIONS_PER_CHAPTER = 2
+FINAL_EXAM_QUESTIONS_PER_SECTION = 10
 
 
 class Report:
@@ -333,9 +333,9 @@ def validate(content):
             chapters_used = {chapter_by_section.get(ref) for ref in question["refs"]} - {None}
             if len(chapters_used) < 2:
                 report.warn(where, "refs が1つの章にしか及んでいません（総合演習は複数の章の知識を組み合わせる問題にします）")
-    expected = len(chapters) * FINAL_EXAM_QUESTIONS_PER_CHAPTER
-    if chapters and not expected * 0.5 <= len(final_exam) <= expected * 1.5:
-        report.warn("finalExam", f"総合演習が {len(final_exam)}問です（目安は章数×2 = {expected}問程度）")
+    expected = len(section_ids - {None}) * FINAL_EXAM_QUESTIONS_PER_SECTION
+    if chapters and len(final_exam) < expected:
+        report.warn("finalExam", f"総合演習が {len(final_exam)}問です（節の数×{FINAL_EXAM_QUESTIONS_PER_SECTION} = {expected}問以上にします）")
 
     _check_premises(chapters, final_exam, report)
 
