@@ -258,8 +258,14 @@ h4 { margin: 0 0 0.4em; font-size: 1rem; }
 .result-tiles .stat { text-align: center; }
 
 /* ===== 教科書 ===== */
-.book { display: grid; grid-template-columns: 250px 1fr; gap: 28px; }
-.toc { position: sticky; top: 70px; align-self: start; max-height: calc(100vh - 90px); overflow-y: auto; font-size: 0.92em; }
+/* 目次は常に出さず、左下のボタンで左からスライドして出す */
+.toc-toggle { position: fixed; z-index: 30; left: 16px; bottom: 20px; display: flex; align-items: center; gap: 6px; }
+.toc-backdrop { position: fixed; inset: 0; z-index: 35; background: rgba(0, 0, 0, 0.4); opacity: 0; pointer-events: none; transition: opacity 0.25s; }
+.toc-backdrop.open { opacity: 1; pointer-events: auto; }
+.toc { position: fixed; z-index: 40; top: 0; left: 0; bottom: 0; width: min(340px, 86vw); overflow-y: auto; font-size: 0.92em; background: var(--surface); border-right: 2px solid var(--border); box-shadow: 6px 0 24px rgba(0, 0, 0, 0.25); padding: 12px 18px 24px; transform: translateX(-105%); transition: transform 0.25s ease; }
+.toc.open { transform: translateX(0); }
+.toc-head { display: flex; justify-content: space-between; align-items: center; gap: 10px; padding-bottom: 8px; border-bottom: 2px solid var(--border); }
+.toc-head .close { background: none; border: 2px solid var(--border); border-radius: 10px; width: 2.2em; height: 2.2em; font-weight: 800; }
 .toc ol { padding-left: 0; list-style: none; margin: 0.3em 0 0.9em; }
 .toc li { margin: 2px 0; }
 .toc .chapter-title { font-weight: 800; margin-top: 0.6em; }
@@ -269,7 +275,7 @@ h4 { margin: 0 0 0.4em; font-size: 1rem; }
 .toc .dot.done { background: var(--correct); }
 .toc .dot.now { background: var(--unknown); }
 .toc .dot.learning { background: var(--wrong); }
-.book-body { min-width: 0; }
+.book-body { min-width: 0; padding-bottom: 40px; }
 .book-body h2:first-of-type { margin-top: 0.2em; }
 .book-body table { border-collapse: collapse; width: 100%; display: block; overflow-x: auto; margin: 1em 0; }
 .book-body th, .book-body td { border: 2px solid var(--border); padding: 8px 12px; text-align: left; vertical-align: top; }
@@ -364,8 +370,6 @@ h4 { margin: 0 0 0.4em; font-size: 1rem; }
 #confetti { position: fixed; inset: 0; width: 100%; height: 100%; pointer-events: none; z-index: 50; }
 
 @media (max-width: 720px) {
-  .book { grid-template-columns: 1fr; }
-  .toc { position: static; max-height: none; border-bottom: 2px solid var(--border); padding-bottom: 8px; }
   .topbar .title { max-width: 100%; flex-basis: 100%; }
   .stage { width: 88px; }
   .sk-flow > li:not(:last-child)::after { display: none; }
@@ -1070,14 +1074,33 @@ h4 { margin: 0 0 0.4em; font-size: 1rem; }
   // ===== 節のページ（問題への入口と本文） =====
   function renderSectionPage() {
     const section = sectionById.get(currentSectionId) || orderedSections[0];
-    const toc = el("nav", { class: "toc", "aria-label": "目次" }, content.chapters.map((chapter) => el("div", {}, [
-      el("div", { class: "chapter-title", text: chapter.title }),
-      el("ol", {}, chapter.sections.map((s) => el("li", {}, [
-        el("button", { class: `link-btn${s.id === section.id ? " active" : ""}`, onclick: () => openSection(s.id) }, [
-          el("span", { class: `dot ${tocDotState(s)}` }), s.title,
-        ]),
-      ]))),
-    ])));
+    // 目次は常に出さず、ボタンを押すと左からスライドして出る
+    const closeButton = el("button", { class: "close", "aria-label": "目次を閉じる", text: "✕" });
+    const toc = el("nav", { class: "toc", id: "toc", "aria-label": "目次", inert: true }, [
+      el("div", { class: "toc-head" }, [el("strong", { text: "目次" }), closeButton]),
+      ...content.chapters.map((chapter) => el("div", {}, [
+        el("div", { class: "chapter-title", text: chapter.title }),
+        el("ol", {}, chapter.sections.map((s) => el("li", {}, [
+          el("button", { class: `link-btn${s.id === section.id ? " active" : ""}`, onclick: () => openSection(s.id) }, [
+            el("span", { class: `dot ${tocDotState(s)}` }), s.title,
+          ]),
+        ]))),
+      ])),
+    ]);
+    const backdrop = el("div", { class: "toc-backdrop" });
+    const toggleButton = el("button", { class: "btn primary toc-toggle", "aria-controls": "toc", "aria-expanded": "false" }, ["☰ 目次"]);
+    const setTocOpen = (open) => {
+      toc.classList.toggle("open", open);
+      backdrop.classList.toggle("open", open);
+      toc.inert = !open;
+      toggleButton.setAttribute("aria-expanded", String(open));
+      if (open) (toc.querySelector(".link-btn.active") || closeButton).focus({ preventScroll: true });
+      else toggleButton.focus({ preventScroll: true });
+    };
+    toggleButton.addEventListener("click", () => setTocOpen(!toc.classList.contains("open")));
+    closeButton.addEventListener("click", () => setTocOpen(false));
+    backdrop.addEventListener("click", () => setTocOpen(false));
+    keyHandler = (event) => { if (event.key === "Escape" && toc.classList.contains("open")) setTocOpen(false); };
 
     const sourceItems = (section.sources || []).map((factId) => factById.get(factId)).filter(Boolean).map((fact) => el("li", {}, [
       el("span", { class: "rank", text: fact.rank }),
@@ -1096,7 +1119,7 @@ h4 { margin: 0 0 0.4em; font-size: 1rem; }
       sourceItems.length ? el("ul", { class: "sources" }, sourceItems) : null,
       el("div", { class: "btn-row" }, [nextSectionButton(section)]),
     ]);
-    app.append(el("div", { class: "book" }, [toc, body]));
+    app.append(body, toggleButton, backdrop, toc);
   }
   // 節のページの先頭に置く、問題の状態の早見（本文を読み直さずに問題へ飛べる）
   function sectionStatusBar(section) {
