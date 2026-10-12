@@ -1,8 +1,8 @@
 """教科書の地の文と解説文だけを抜き出し、yomiyasu とリントに渡す Markdown を作る。
 
 抜き出す対象:
-  - 節の body の中の <p>（属性なし）の段落
-  - 問題の explanation（各節の問題と総合演習）
+  - 各項目（items[]）の body の中の <p>（属性なし）の段落
+  - 問題の explanation（すぐ確認・章末演習・総合演習）
 抜き出さないもの:
   - 表・コード・リスト・用語定義（<p> 以外）、問題文、選択肢
   - <code> <strong> <a> 以外のタグを含む段落（書き戻しで壊さないため。件数を標準エラーに出す）
@@ -39,8 +39,8 @@ def marker(prose_id):
     return f"<!-- prose: {prose_id} -->"
 
 
-def body_paragraph_id(section_id, index):
-    return f"{section_id}#p{index}"
+def body_paragraph_id(owner_id, index):
+    return f"{owner_id}#p{index}"
 
 
 def explanation_id(question_id):
@@ -81,10 +81,21 @@ def markdown_to_inline_html(text):
     return "".join(converted)
 
 
-def iter_questions(content):
+def iter_items(content):
+    """(本文の持ち主のID, 項目) を学習順に返す。ID は「節ID/項目ID」。"""
     for chapter in content["chapters"]:
         for section in chapter["sections"]:
-            yield from section["questions"]
+            for item in section["items"]:
+                yield f"{section['id']}/{item['id']}", item
+
+
+def iter_questions(content):
+    """すぐ確認 → 章末演習 → 総合演習 の順に問題を返す。"""
+    for chapter in content["chapters"]:
+        for section in chapter["sections"]:
+            for item in section["items"]:
+                yield item["check"]
+        yield from chapter.get("exercise", [])
     yield from content.get("finalExam", [])
 
 
@@ -92,14 +103,13 @@ def extract_blocks(content):
     """(prose_id, markdown) の一覧と、変換できずに飛ばした ID の一覧を返す。"""
     blocks = []
     skipped = []
-    for chapter in content["chapters"]:
-        for section in chapter["sections"]:
-            for index, match in enumerate(PARAGRAPH_PATTERN.finditer(section["body"]), start=1):
-                prose_id = body_paragraph_id(section["id"], index)
-                if can_convert(match.group(1)):
-                    blocks.append((prose_id, inline_html_to_markdown(match.group(1))))
-                else:
-                    skipped.append(prose_id)
+    for owner_id, item in iter_items(content):
+        for index, match in enumerate(PARAGRAPH_PATTERN.finditer(item["body"]), start=1):
+            prose_id = body_paragraph_id(owner_id, index)
+            if can_convert(match.group(1)):
+                blocks.append((prose_id, inline_html_to_markdown(match.group(1))))
+            else:
+                skipped.append(prose_id)
     for question in iter_questions(content):
         prose_id = explanation_id(question["id"])
         if can_convert(question["explanation"]):

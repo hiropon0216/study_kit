@@ -1,26 +1,29 @@
-# 教科書の部品（body で使うオブジェクト）
+# 教科書の部品（項目の body で使うオブジェクト）
 
-教科書は文章だけで書かない。各節で、内容に合う部品を選んで「見て分かる」形にする。
-部品の見た目（色・アイコン・ダークモード）は template.html が持っているので、body には下の HTML とクラス名だけを書く。
+教科書は文章だけで書かない。**図解を多用し、説明は丁寧に** する。各項目で、内容に合う部品を選んで「見て分かる」形にする。
+部品の見た目（色・アイコン。ダーク基調）は template.html が持っているので、body には下の HTML とクラス名だけを書く。
 
-## 1節の組み立て（目安）
+## 1つの項目（items[]）の組み立て（目安）
 
-1. `sk-goals`：この節でわかること（必ず先頭に置く）
-2. `sk-premise`：この節で初めて出てくる固有名詞の前提の説明（`references/proper-nouns.md`。初出の位置より前に置く）
-3. 導入の地の文（`<p>`）
-4. 中心になる図を1つ以上：`sk-nest`（入れ子・包含）、`sk-flow`（手順・流れ）、`sk-compare`（比較）、`sk-figure`（自由な図）のどれか
-5. 必要に応じて `sk-callout`（たとえ・ポイント・注意・実務メモ）、`sk-terms`（用語）、`sk-badge-list`（状態の一覧）、表、コード
-6. `sk-summary`：まとめ（必ず最後に置く）
+節は「項目の説明 → すぐ確認」の繰り返しでできている（`references/content-schema.md`）。1つの説明の項目は次の順に組み立てる。
 
-部品を使うのは理解を助けるときだけ。飾りのために置かない。1節に同じ部品を何度も並べない（`sk-premise` は固有名詞の数だけ並べてよい）。
+1. `sk-premise`：この項目で初めて出てくる固有名詞の前提の説明（`references/proper-nouns.md`。初出の位置より前に置く）
+2. 導入の地の文（`<p>`）。「なぜそうなるのか」から書く。結論だけを並べない
+3. 中心になる図を1つ以上（**必須**）：`sk-figure`（自由な図・絵柄）、`sk-nest`（入れ子・包含）、`sk-flow`（手順・流れ）、`sk-compare`（比較）、`sk-cells`（並んだマス）、`sk-terms`（用語）、`sk-badge-list`（状態の一覧）、表のどれか
+4. 図を読み解く地の文。図の中の具体的な値や名前を使って説明する
+5. 必要に応じて `sk-callout`（たとえ・POINT・注意・実務メモ）、コード
+
+例題の項目（`type: "example"`）は、`title` に問題文、`body` に `sk-steps` で解き方を書く。手順の中にも図（`sk-cells` など）を入れてよい。
+
+この節の要点は `keyPoints` に書く（右の列に出る）。本文に `sk-goals` や `sk-summary` を置く必要はない。
+
+部品を使うのは理解を助けるときだけ。飾りのために置かない。1つの項目に同じ部品を何度も並べない（`sk-premise` は固有名詞の数だけ並べてよい）。
+
+## 本文の重要語
+
+`<p>` の中の `<strong>` は、蛍光ペンの線を引いた表示になる。その項目で覚えてほしい語（すぐ確認で問う語）にだけ使う。
 
 ## 部品カタログ
-
-### sk-goals：この節でわかること
-
-```html
-<div class="sk-goals"><ul><li>Pod とコンテナの関係</li><li>Pod を直接作らない理由</li></ul></div>
-```
 
 ### sk-premise：固有名詞の前提の説明
 
@@ -43,7 +46,7 @@
 
 | クラス | 見出し | 使いどころ |
 |---|---|---|
-| `point` | ポイント | 覚えてほしい要点 |
+| `point` | POINT | 覚えてほしい要点・法則 |
 | `warn` | 注意 | よくある誤解・はまりどころ |
 | `analogy` | たとえると | 初学者向けのたとえ。たとえで事実を曲げない |
 | `tip` | 実務メモ | 現場での使い方（目的が実務のとき） |
@@ -97,6 +100,32 @@
 
 1列目はグレー、2列目は紫、3列目は緑の帯が付く。「前に知っているもの → 今回学ぶもの」の順に並べる。
 
+### sk-cells：並んだマス（ビット・配列・時系列など）
+
+同じ種類のものが並ぶ様子を、マスの列で見せる。`data-label` を付けると、下に括弧と説明が付く。
+
+```html
+<div class="sk-cells" data-label="1バイト（8ビット）"><span>0</span><span>1</span><span>0</span><span>0</span><span>0</span><span>0</span><span>0</span><span>1</span></div>
+```
+
+- マスの中は短い文字（数字・記号・2〜4文字の語）
+- 強調したいマスは `class="on"`（黄色）、過ぎたもの・まだないものは `class="dim"`（薄い点線）
+- 例：`<span class="dim">1回目</span><span class="dim">2回目</span><span class="on">前回</span><span>いま</span>`
+
+### sk-steps：解き方の手順（例題で使う）
+
+例題の解き方を、番号付きの段で見せる。各段の中は `<p>` で書き、図を入れてもよい。
+
+```html
+<ol class="sk-steps">
+  <li><p>1バイトは8ビットです。</p></li>
+  <li><p>2バイトは、その8ビットのかたまりが2つです。</p></li>
+  <li><p>バイト → ビットは「× 8」なので、2 × 8 ＝ <strong>16ビット</strong>。</p></li>
+</ol>
+```
+
+`sk-flow`（横に並ぶ手順のカード）は「操作の流れ」、`sk-steps` は「考え方の順序」に使う。
+
 ### sk-terms：用語カード
 
 ```html
@@ -119,9 +148,12 @@
 
 色は `ok`（緑）・`warn`（橙）・`err`（赤）・`info`（青）。バッジは `<p>` の中に入れない（入れるとその段落が表現の改修の対象外になる）。
 
-### sk-figure：自由な図（インライン SVG）
+### sk-figure：自由な図・絵柄（インライン SVG）
 
-上の部品で表せない図（時間の変化、グラフ、位置関係）は SVG で描く。
+上の部品で表せない図（時間の変化、グラフ、位置関係、繰り返し、ものの絵柄）は SVG で描く。説明の項目では、この部品で「絵」を描くのが最も伝わりやすい。
+
+- `figcaption` は「図 1-2-1　〜」のように、節番号と通し番号を付ける。本文やヒントから「図 1-2-1 の…」と指せるようにする
+- ランプ・箱・矢印など、身近なものの形にたとえて描いてよい（例：0 と 1 を消えたランプとついたランプで描く）
 
 ```html
 <figure class="sk-figure">
@@ -137,20 +169,32 @@
 
 | クラス | 用途 |
 |---|---|
-| `sk-fill-primary` / `sk-fill-primary-soft` | 主役（紫）とその薄い色 |
-| `sk-fill-accent` / `sk-fill-accent-soft` | 2番目の要素（緑）とその薄い色 |
-| `sk-fill-warn` | 異常・エラー（赤） |
-| `sk-fill-muted` / `sk-fill-surface` | 背景・枠の中 |
-| `sk-stroke` / `sk-stroke-primary` | 線（`fill="none"` と組み合わせる） |
-| `sk-text` / `sk-text-muted` / `sk-text-on` | 文字（通常・薄い・色付きの図形の上） |
+| `sk-fill-primary` / `sk-fill-primary-soft` | 主役（青紫）とその薄い色 |
+| `sk-fill-accent` / `sk-fill-accent-soft` | 2番目の要素・正常（緑）とその薄い色 |
+| `sk-fill-warn` / `sk-fill-warn-soft` | 異常・エラー（橙）とその薄い色 |
+| `sk-fill-mark` / `sk-fill-mark-soft` | 目立たせたいもの・光っているもの（黄）と、その光（薄い黄） |
+| `sk-fill-muted` / `sk-fill-surface` | 背景・枠の中（図の地より少し暗い／明るい） |
+| `sk-stroke` / `sk-stroke-primary` / `sk-stroke-accent` / `sk-stroke-warn` / `sk-stroke-mark` | 線（`fill="none"` と組み合わせる） |
+| `sk-text` / `sk-text-muted` | 文字（通常・薄い） |
+| `sk-text-on` / `sk-text-dark` | 色付きの図形の上の文字（白／黄色の図形の上の黒） |
+| `sk-text-primary` / `sk-text-accent` / `sk-text-warn` | 色付きの文字（強調・正常・異常） |
 
 - `viewBox` を必ず付け、`width` / `height` は書かない（画面幅に合わせて縮む）
-- 文字は 14〜16 の大きさで、図形からはみ出さないようにする
+- 文字は 12〜16 の大きさで、図形からはみ出さないようにする
+- 矢印は `<defs>` の `<marker>` で作り、中の `<path>` にも色のクラスを付ける。`id` は教材の中で重ならない名前にする（例 `ah-crash`）
+
+  ```html
+  <defs><marker id="ah-crash" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="7" markerHeight="7" orient="auto"><path d="M0 0L10 5L0 10z" class="sk-fill-primary"/></marker></defs>
+  <path d="M172 65H220" stroke-width="2" fill="none" class="sk-stroke-primary" marker-end="url(#ah-crash)"/>
+  ```
 - 外部の画像やフォントは読み込まない。`<script>` や `on〜` 属性は書かない
 
-### sk-summary：まとめ
+### sk-goals・sk-summary：わかること・まとめ（任意）
+
+節の要点は `keyPoints` で右の列に出るので、通常は使わない。項目の途中で区切りを付けたいときだけ使う。
 
 ```html
+<div class="sk-goals"><ul><li>Pod とコンテナの関係</li></ul></div>
 <div class="sk-summary"><ul><li>Pod は最小のデプロイ単位</li><li>Pod は Deployment に作らせる</li></ul></div>
 ```
 

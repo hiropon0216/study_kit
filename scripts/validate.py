@@ -3,9 +3,10 @@
 検査内容:
   - スキーマ違反（必須項目・型・問題形式）
   - ID の重複
-  - リンク切れ（refs が存在しない節を指す、sources が存在しない事実IDを指す）
+  - リンク切れ（refs が存在しない節・項目を指す、sources が存在しない事実IDを指す）
   - 正解の整合性（正解が選択肢にない、並べ替えの正解が項目の並べ替えになっていない）
-  - 分量の目安（1節6〜10問、総合演習は節の数×10問以上）
+  - 分量の目安（1節の項目3〜6個、章末演習10問以上、総合演習は節の数×10問以上）
+  - 図解の使い忘れ（説明の項目ごとに図や表の部品を1つ以上）
   - 固有名詞の前提の説明（sk-premise）が、その語の初出より後ろに置かれていないか
 
 使い方:
@@ -19,10 +20,12 @@ import re
 import sys
 from pathlib import Path
 
-QUESTION_TYPES = {"choice", "fill", "order", "predict"}
+QUESTION_TYPES = {"choice", "fill", "order", "predict", "truefalse"}
+ITEM_TYPES = {"text", "example"}
 FACT_RANKS = {"S", "A", "B"}
 PURPOSES = {"資格", "実務", "教養"}
 CONTENT_ID_PATTERN = re.compile(r"^[a-z0-9][a-z0-9-]*$")
+ITEM_ID_PATTERN = re.compile(r"^[a-z0-9][a-z0-9-]*$")
 FORBIDDEN_HTML_PATTERNS = [
     (re.compile(r"<\s*(script|style|iframe|object|embed)\b", re.IGNORECASE), "<script> <style> <iframe> などのタグ"),
     (re.compile(r"\son[a-z]+\s*=", re.IGNORECASE), "on〜 のイベント属性"),
@@ -30,11 +33,18 @@ FORBIDDEN_HTML_PATTERNS = [
     (re.compile(r"\bsrc\s*=\s*\"https?://", re.IGNORECASE), "外部URLの画像・メディア（オフラインで表示できない）"),
 ]
 STYLE_ATTRIBUTE_PATTERN = re.compile(r"\sstyle\s*=", re.IGNORECASE)
-VISUAL_COMPONENT_PATTERN =re.compile(r'class="[^"]*\b(sk-nest|sk-flow|sk-compare|sk-figure|sk-badge-list|sk-terms)\b|<table\b')
+VISUAL_COMPONENT_PATTERN = re.compile(
+    r'class="[^"]*\b(sk-nest|sk-flow|sk-compare|sk-figure|sk-badge-list|sk-terms|sk-cells|sk-steps)\b|<table\b'
+)
 PREMISE_PATTERN = re.compile(r'<div class="sk-premise"(?: data-term="([^"]*)")?')
 TAG_PATTERN = re.compile(r"<[^>]+>")
-MIN_QUESTIONS_PER_SECTION = 6
-MAX_QUESTIONS_PER_SECTION = 10
+CHAPTER_NUMBER_PATTERN = re.compile(r"^\s*(第\s*)?[0-9０-９]+\s*章")
+SECTION_NUMBER_PATTERN = re.compile(r"^\s*[0-9０-９]+\s*[.．\-－]\s*[0-9０-９]+")
+MIN_ITEMS_PER_SECTION = 3
+MAX_ITEMS_PER_SECTION = 6
+MIN_KEY_POINTS = 2
+MAX_KEY_POINTS = 6
+MIN_EXERCISE_PER_CHAPTER = 10
 FINAL_EXAM_QUESTIONS_PER_SECTION = 10
 
 
@@ -69,13 +79,15 @@ def _check_meta(meta, report):
         report.error("meta.id", "英小文字・数字・ハイフンだけで書いてください（保存キー study-kit:{id} に使います）")
     if meta.get("purpose") not in PURPOSES:
         report.error("meta.purpose", f"{sorted(PURPOSES)} のいずれかにしてください")
+    if meta.get("series") is not None and not isinstance(meta.get("series"), str):
+        report.error("meta.series", "文字列にしてください")
     goals = meta.get("goals")
     if not isinstance(goals, list) or not goals or not all(_is_non_empty_string(g) for g in goals):
         report.error("meta.goals", "「〜できる」形式のゴールを1つ以上並べてください")
 
     exam = meta.get("exam")
     if meta.get("purpose") == "資格" and exam is None:
-        report.warn("meta.exam", "資格トピックなのに exam がありません（模擬試験モードが出ません）")
+        report.warn("meta.exam", "資格トピックなのに exam がありません（模擬試験が出ません）")
     if exam is not None:
         if not isinstance(exam, dict):
             report.error("meta.exam", "null かオブジェクトにしてください")
@@ -94,20 +106,8 @@ def _check_html(fragment, where, report):
     for pattern, label in FORBIDDEN_HTML_PATTERNS:
         if pattern.search(fragment):
             report.error(where, f"使えない HTML が含まれています: {label}")
-
-
-def _check_body_components(body, where, report):
-    """教科書の部品（references/textbook-components.md）の使い忘れを警告する。"""
-    if not isinstance(body, str):
-        return
-    if 'class="sk-goals"' not in body:
-        report.warn(where, "先頭に sk-goals（この節でわかること）がありません")
-    if 'class="sk-summary"' not in body:
-        report.warn(where, "最後に sk-summary（まとめ）がありません")
-    if STYLE_ATTRIBUTE_PATTERN.search(body):
+    if STYLE_ATTRIBUTE_PATTERN.search(fragment):
         report.warn(where, "style 属性で見た目を上書きしています（見た目は template.html の部品に任せ、どの教材でも同じ見た目にします）")
-    if not VISUAL_COMPONENT_PATTERN.search(body):
-        report.warn(where, "図や表の部品（sk-nest / sk-flow / sk-compare / sk-figure など）が1つもありません")
 
 
 def _mask_tags(fragment):
@@ -129,14 +129,26 @@ def _question_text(question):
     if not isinstance(question, dict):
         return ""
     options = question.get("options") or []
-    parts = [question.get("prompt"), question.get("code"), question.get("explanation"), *options]
+    parts = [question.get("prompt"), question.get("code"), question.get("explanation"), question.get("hint"), *options]
     return _mask_tags(" ".join(str(part) for part in parts if isinstance(part, str)))
+
+
+def _iter_items(chapters):
+    for chapter in chapters:
+        if not isinstance(chapter, dict):
+            continue
+        for section in chapter.get("sections", []) or []:
+            if not isinstance(section, dict):
+                continue
+            for item in section.get("items", []) or []:
+                if isinstance(item, dict):
+                    yield chapter, section, item
 
 
 def _check_premises(chapters, final_exam, report):
     """固有名詞の前提の説明（references/proper-nouns.md）が、その語の初出までに置かれているかを調べる。
 
-    教材を学習順に並べた文字列（節の本文 → 節の問題 → … → 総合演習）の中で、
+    教材を学習順に並べた文字列（項目の本文 → その項目のすぐ確認 → … → 章末演習 → … → 総合演習）の中で、
     sk-premise の位置よりも前にその語が出てきていたら警告する。
     """
     texts = []  # (場所, 文字列)
@@ -145,19 +157,25 @@ def _check_premises(chapters, final_exam, report):
         if not isinstance(chapter, dict):
             continue
         for section in chapter.get("sections", []) or []:
-            if not isinstance(section, dict) or not isinstance(section.get("body"), str):
+            if not isinstance(section, dict):
                 continue
-            where = f"節 {section.get('id')}"
-            body = section["body"]
-            for match in PREMISE_PATTERN.finditer(body):
-                term = (match.group(1) or "").strip()
-                if not term:
-                    report.warn(where, 'sk-premise に data-term（説明する固有名詞）がありません')
+            for item in section.get("items", []) or []:
+                if not isinstance(item, dict):
                     continue
-                premises.append((term, where, len(texts), match.start()))
-            texts.append((where, _mask_tags(body)))
-            for question in section.get("questions", []) or []:
-                texts.append((f"{where} の問題", _question_text(question)))
+                where = f"節 {section.get('id')} 項目 {item.get('id')}"
+                title = item.get("title") if isinstance(item.get("title"), str) else ""
+                body = item.get("body") if isinstance(item.get("body"), str) else ""
+                text = title + "\n" + body
+                for match in PREMISE_PATTERN.finditer(text):
+                    term = (match.group(1) or "").strip()
+                    if not term:
+                        report.warn(where, "sk-premise に data-term（説明する固有名詞）がありません")
+                        continue
+                    premises.append((term, where, len(texts), match.start()))
+                texts.append((where, _mask_tags(text)))
+                texts.append((f"{where} のすぐ確認", _question_text(item.get("check"))))
+        for question in chapter.get("exercise", []) or []:
+            texts.append((f"章 {chapter.get('id')} の章末演習", _question_text(question)))
     for question in final_exam:
         texts.append(("総合演習", _question_text(question)))
 
@@ -174,11 +192,11 @@ def _check_premises(chapters, final_exam, report):
             text_where, text = texts[index]
             match = pattern.search(text)
             if match and (index < text_index or match.start() < position):
-                report.warn(where, f"「{term}」は {text_where} で先に出てきます。前提の説明（sk-premise）は初出の節の、初出の文より前に置いてください")
+                report.warn(where, f"「{term}」は {text_where} で先に出てきます。前提の説明（sk-premise）は初出の項目の、初出の文より前に置いてください")
                 break
 
 
-def _check_question(question, where, section_ids, report):
+def _check_question(question, where, ref_targets, report, is_check=False):
     if not isinstance(question, dict):
         report.error(where, "問題はオブジェクトが必要です")
         return
@@ -198,10 +216,20 @@ def _check_question(question, where, section_ids, report):
             report.error(where, "options は2つ以上の文字列が必要です")
         elif len(set(options)) != len(options):
             report.error(where, "options に同じ選択肢が重複しています")
+        elif len(options) > 8:
+            report.error(where, "options は8つまでにしてください")
         if not isinstance(answer, int) or isinstance(answer, bool) or not isinstance(options, list) or not 0 <= answer < len(options):
             report.error(where, "answer は options の範囲内のインデックス（0始まり）が必要です（正解が選択肢にありません）")
         if question_type == "predict" and not _is_non_empty_string(question.get("code")):
             report.error(where, "出力予測（predict）は code に読ませるコードやコマンドが必要です")
+
+    elif question_type == "truefalse":
+        if not isinstance(answer, bool):
+            report.error(where, "truefalse の answer は true（○）か false（×）が必要です")
+        if options not in (None, []):
+            report.warn(where, "truefalse では options を使いません")
+        if isinstance(question.get("prompt"), str) and re.search(r"正しければ|誤りなら|[○×]", question["prompt"]):
+            report.warn(where, "truefalse の prompt には判定させる文だけを書きます（「正しければ○、誤りなら×」は学習エンジンが付けます）")
 
     elif question_type == "fill":
         if not isinstance(answer, list) or not answer or not all(_is_non_empty_string(a) for a in answer):
@@ -219,13 +247,20 @@ def _check_question(question, where, section_ids, report):
         elif answer == options:
             report.error(where, "order の options（初回の表示順）が正解と同じ順になっています")
 
+    if question.get("unit") is not None and (question_type != "fill" or not _is_non_empty_string(question.get("unit"))):
+        report.warn(where, "unit（入力欄の後ろの単位）は fill の問題で、空でない文字列のときだけ使います")
+    if question.get("hint") is not None and not _is_non_empty_string(question.get("hint")):
+        report.error(where, "hint は空でない文字列にしてください")
+
     refs = question.get("refs")
+    if is_check:
+        return  # すぐ確認は、置かれた項目が教科書の該当箇所になる
     if not isinstance(refs, list) or not refs:
-        report.error(where, "refs に教科書の該当節IDを1つ以上入れてください")
+        report.error(where, "refs に教科書の該当箇所（節ID か 節ID#項目ID）を1つ以上入れてください")
     else:
         for ref in refs:
-            if ref not in section_ids:
-                report.error(where, f"refs のリンク切れ: '{ref}' という節はありません")
+            if ref not in ref_targets:
+                report.error(where, f"refs のリンク切れ: '{ref}' という節・項目はありません")
 
 
 def validate(content):
@@ -262,11 +297,26 @@ def validate(content):
         report.error("chapters", "章の配列が必要です")
         chapters = []
 
-    section_ids = {
-        section.get("id")
-        for chapter in chapters if isinstance(chapter, dict)
-        for section in chapter.get("sections", []) if isinstance(section, dict)
-    }
+    # refs に書ける行き先：節ID と 節ID#項目ID
+    section_ids = set()
+    ref_targets = set()
+    chapter_by_section = {}
+    for chapter in chapters:
+        if not isinstance(chapter, dict):
+            continue
+        for section in chapter.get("sections", []) or []:
+            if not isinstance(section, dict):
+                continue
+            section_ids.add(section.get("id"))
+            ref_targets.add(section.get("id"))
+            chapter_by_section[section.get("id")] = chapter.get("id")
+            for item in section.get("items", []) or []:
+                if isinstance(item, dict):
+                    ref_targets.add(f"{section.get('id')}#{item.get('id')}")
+
+    def ref_chapter(ref):
+        return chapter_by_section.get(str(ref).split("#")[0])
+
     seen_ids = {}
 
     def register_id(identifier, where):
@@ -275,27 +325,38 @@ def validate(content):
         else:
             seen_ids[identifier] = where
 
+    section_count = 0
     for chapter_index, chapter in enumerate(chapters):
         chapter_where = f"chapters[{chapter_index}]"
         if not isinstance(chapter, dict):
             report.error(chapter_where, "オブジェクトが必要です")
             continue
         _check_required_strings(chapter, ["id", "title"], chapter_where, report)
+        chapter_where = f"章 {chapter.get('id')}"
         register_id(chapter.get("id"), chapter_where)
+        if isinstance(chapter.get("title"), str) and CHAPTER_NUMBER_PATTERN.match(chapter["title"]):
+            report.warn(chapter_where, "title に章番号を書かないでください（「第1章」は学習エンジンが付けます）")
         sections = chapter.get("sections")
         if not isinstance(sections, list) or not sections:
             report.error(chapter_where, "節の配列が必要です")
-            continue
+            sections = []
         for section_index, section in enumerate(sections):
-            section_where = f"{chapter_where}.sections[{section_index}]"
             if not isinstance(section, dict):
-                report.error(section_where, "オブジェクトが必要です")
+                report.error(f"{chapter_where}.sections[{section_index}]", "オブジェクトが必要です")
                 continue
+            section_count += 1
             section_where = f"節 {section.get('id')}"
-            _check_required_strings(section, ["id", "title", "body"], section_where, report)
+            _check_required_strings(section, ["id", "title"], section_where, report)
             register_id(section.get("id"), section_where)
-            _check_html(section.get("body"), f"{section_where}.body", report)
-            _check_body_components(section.get("body"), section_where, report)
+            if isinstance(section.get("title"), str) and SECTION_NUMBER_PATTERN.match(section["title"]):
+                report.warn(section_where, "title に節番号を書かないでください（「1-2」は学習エンジンが付けます）")
+            minutes = section.get("minutes")
+            if minutes is not None and (not isinstance(minutes, int) or isinstance(minutes, bool) or minutes <= 0):
+                report.error(section_where, "minutes（読了目安）は正の整数にしてください")
+            for prerequisite in section.get("prerequisites") or []:
+                if prerequisite not in section_ids:
+                    report.error(section_where, f"prerequisites のリンク切れ: '{prerequisite}' という節はありません")
+
             sources = section.get("sources")
             if not isinstance(sources, list) or not sources:
                 report.error(section_where, "sources にファクトシートの事実IDを1つ以上入れてください")
@@ -303,37 +364,84 @@ def validate(content):
                 for fact_id in sources:
                     if fact_id not in fact_ids:
                         report.error(section_where, f"sources のリンク切れ: '{fact_id}' はファクトシートにありません")
-            questions = section.get("questions")
-            if not isinstance(questions, list):
-                report.error(section_where, "questions の配列が必要です")
+
+            key_points = section.get("keyPoints")
+            if not isinstance(key_points, list) or not key_points or not all(_is_non_empty_string(p) for p in key_points):
+                report.error(section_where, "keyPoints（この節の要点）に文字列を並べてください")
+            elif not MIN_KEY_POINTS <= len(key_points) <= MAX_KEY_POINTS:
+                report.warn(section_where, f"keyPoints が {len(key_points)}個です（目安は{MIN_KEY_POINTS}〜{MAX_KEY_POINTS}個）")
+
+            items = section.get("items")
+            if not isinstance(items, list) or not items:
+                report.error(section_where, "items（本文の項目とすぐ確認）の配列が必要です")
                 continue
-            if not MIN_QUESTIONS_PER_SECTION <= len(questions) <= MAX_QUESTIONS_PER_SECTION:
-                report.warn(section_where, f"問題数が {len(questions)}問です（目安は{MIN_QUESTIONS_PER_SECTION}〜{MAX_QUESTIONS_PER_SECTION}問）")
-            for question in questions:
-                where = f"問題 {question.get('id') if isinstance(question, dict) else '?'}"
-                if isinstance(question, dict):
-                    register_id(question.get("id"), where)
-                _check_question(question, where, section_ids, report)
+            if not MIN_ITEMS_PER_SECTION <= len(items) <= MAX_ITEMS_PER_SECTION:
+                report.warn(section_where, f"項目が {len(items)}個です（目安は{MIN_ITEMS_PER_SECTION}〜{MAX_ITEMS_PER_SECTION}個。項目ごとにすぐ確認が1問付きます）")
+            item_ids = set()
+            text_items = 0
+            for item_index, item in enumerate(items):
+                item_where = f"{section_where} items[{item_index}]"
+                if not isinstance(item, dict):
+                    report.error(item_where, "オブジェクトが必要です")
+                    continue
+                item_where = f"{section_where} 項目 {item.get('id')}"
+                _check_required_strings(item, ["id", "title", "body"], item_where, report)
+                if _is_non_empty_string(item.get("id")):
+                    if not ITEM_ID_PATTERN.match(item["id"]):
+                        report.error(item_where, "項目IDは英小文字・数字・ハイフンで書いてください（例 i1）")
+                    if item["id"] in item_ids:
+                        report.error(item_where, f"項目ID '{item['id']}' がこの節の中で重複しています")
+                    item_ids.add(item["id"])
+                item_type = item.get("type", "text")
+                if item_type not in ITEM_TYPES:
+                    report.error(item_where, f"type は {sorted(ITEM_TYPES)} のいずれかにしてください（省略すると text）")
+                _check_html(item.get("title"), f"{item_where}.title", report)
+                _check_html(item.get("body"), f"{item_where}.body", report)
+                if item_type == "text":
+                    text_items += 1
+                    if isinstance(item.get("body"), str) and not VISUAL_COMPONENT_PATTERN.search(item["body"]):
+                        report.warn(item_where, "図や表の部品（sk-figure / sk-nest / sk-flow / sk-compare / sk-cells など）が1つもありません。説明の項目には図解を1つ以上入れます")
+                elif isinstance(item.get("body"), str) and "sk-steps" not in item["body"]:
+                    report.warn(item_where, "例題の解き方は sk-steps（手順）で書きます")
+                check = item.get("check")
+                check_where = f"すぐ確認 {check.get('id') if isinstance(check, dict) else '?'}（{section.get('id')} {item.get('id')}）"
+                if not isinstance(check, dict):
+                    report.error(item_where, "check（すぐ確認の問題）が必要です")
+                    continue
+                register_id(check.get("id"), check_where)
+                _check_question(check, check_where, ref_targets, report, is_check=True)
+            if text_items == 0:
+                report.error(section_where, "説明の項目（type が text）が1つもありません")
+
+        exercise = chapter.get("exercise")
+        if not isinstance(exercise, list):
+            report.error(chapter_where, "exercise（章末演習）の問題配列が必要です")
+            exercise = []
+        if len(exercise) < MIN_EXERCISE_PER_CHAPTER:
+            report.warn(chapter_where, f"章末演習が {len(exercise)}問です（{MIN_EXERCISE_PER_CHAPTER}問以上にします）")
+        for question in exercise:
+            where = f"章末演習 {question.get('id') if isinstance(question, dict) else '?'}"
+            if isinstance(question, dict):
+                register_id(question.get("id"), where)
+            _check_question(question, where, ref_targets, report)
+            if isinstance(question, dict) and isinstance(question.get("refs"), list):
+                if question["refs"] and all(ref_chapter(ref) != chapter.get("id") for ref in question["refs"]):
+                    report.warn(where, "refs がこの章の節を1つも指していません（章末演習はその章の内容から出します）")
 
     final_exam = content.get("finalExam")
     if not isinstance(final_exam, list):
-        report.error("finalExam", "総合演習の問題配列が必要です")
+        report.error("finalExam", "総合演習の問題配列が必要です（ない場合は []）")
         final_exam = []
-    chapter_by_section = {
-        section.get("id"): chapter.get("id")
-        for chapter in chapters if isinstance(chapter, dict)
-        for section in chapter.get("sections", []) if isinstance(section, dict)
-    }
     for question in final_exam:
         where = f"総合演習 {question.get('id') if isinstance(question, dict) else '?'}"
         if isinstance(question, dict):
             register_id(question.get("id"), where)
-        _check_question(question, where, section_ids, report)
+        _check_question(question, where, ref_targets, report)
         if isinstance(question, dict) and isinstance(question.get("refs"), list):
-            chapters_used = {chapter_by_section.get(ref) for ref in question["refs"]} - {None}
+            chapters_used = {ref_chapter(ref) for ref in question["refs"]} - {None}
             if len(chapters_used) < 2:
                 report.warn(where, "refs が1つの章にしか及んでいません（総合演習は複数の章の知識を組み合わせる問題にします）")
-    expected = len(section_ids - {None}) * FINAL_EXAM_QUESTIONS_PER_SECTION
+    expected = section_count * FINAL_EXAM_QUESTIONS_PER_SECTION
     if chapters and len(final_exam) < expected:
         report.warn("finalExam", f"総合演習が {len(final_exam)}問です（節の数×{FINAL_EXAM_QUESTIONS_PER_SECTION} = {expected}問以上にします）")
 
@@ -342,7 +450,7 @@ def validate(content):
     used_fact_ids = {
         fact_id
         for chapter in chapters if isinstance(chapter, dict)
-        for section in chapter.get("sections", []) if isinstance(section, dict)
+        for section in chapter.get("sections", []) or [] if isinstance(section, dict)
         for fact_id in section.get("sources", []) or []
     }
     for fact_id in sorted(fact_ids - used_fact_ids - {None}):

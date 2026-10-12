@@ -19,6 +19,7 @@ from extract_prose import (
     body_paragraph_id,
     explanation_id,
     extract_blocks,
+    iter_items,
     iter_questions,
     markdown_to_inline_html,
     parse_blocks,
@@ -31,19 +32,18 @@ def split_paragraphs(text):
 
 def apply_revisions(content, revised_by_id):
     warnings = []
-    for chapter in content["chapters"]:
-        for section in chapter["sections"]:
-            counter = {"index": 0}
+    for owner_id, item in iter_items(content):
+        counter = {"index": 0}
 
-            def replace_paragraph(match, section_id=section["id"], counter=counter):
-                counter["index"] += 1
-                prose_id = body_paragraph_id(section_id, counter["index"])
-                if prose_id not in revised_by_id:
-                    return match.group(0)  # 抜き出し対象外だった段落はそのまま
-                paragraphs = split_paragraphs(revised_by_id[prose_id])
-                return "".join(f"<p>{markdown_to_inline_html(p)}</p>" for p in paragraphs)
+        def replace_paragraph(match, owner_id=owner_id, counter=counter):
+            counter["index"] += 1
+            prose_id = body_paragraph_id(owner_id, counter["index"])
+            if prose_id not in revised_by_id:
+                return match.group(0)  # 抜き出し対象外だった段落はそのまま
+            paragraphs = split_paragraphs(revised_by_id[prose_id])
+            return "".join(f"<p>{markdown_to_inline_html(p)}</p>" for p in paragraphs)
 
-            section["body"] = PARAGRAPH_PATTERN.sub(replace_paragraph, section["body"])
+        item["body"] = PARAGRAPH_PATTERN.sub(replace_paragraph, item["body"])
 
     for question in iter_questions(content):
         prose_id = explanation_id(question["id"])

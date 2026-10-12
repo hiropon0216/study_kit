@@ -47,10 +47,10 @@ def extract_content(built_html):
 def render_factsheet_markdown(content):
     """教材JSONの factsheet から、使用箇所つきのファクトシートを作る。"""
     usage_by_fact_id = {}
-    for chapter in content["chapters"]:
-        for section in chapter["sections"]:
+    for chapter_no, chapter in enumerate(content["chapters"], start=1):
+        for section_no, section in enumerate(chapter["sections"], start=1):
             for fact_id in section.get("sources", []):
-                usage_by_fact_id.setdefault(fact_id, []).append(f"{chapter['title']} ／ {section['title']}")
+                usage_by_fact_id.setdefault(fact_id, []).append(f"第{chapter_no}章 {chapter['title']} ／ {chapter_no}-{section_no} {section['title']}")
 
     meta = content["meta"]
     lines = [f"# ファクトシート：{meta['title']}", ""]
