@@ -412,6 +412,42 @@ main { padding: 28px 20px 70px; }
 .sk-summary { background: var(--surface); border: 1px solid var(--mark); border-radius: 12px; padding: 10px 16px; margin: 1.4em 0 0.6em; }
 .sk-summary::before { content: "⭐ まとめ"; display: block; font-weight: 700; color: var(--mark); }
 
+/* ===== 出題（システムが制御する。学習者は答えるだけ） ===== */
+.qhead { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; justify-content: space-between; }
+.qhead-l { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; font-size: 0.78rem; color: var(--muted); }
+.qs { font-size: 0.72rem; font-weight: 700; padding: 1px 9px; border-radius: 99px; white-space: nowrap; }
+.qs.new { background: var(--surface-2); color: var(--muted); }
+.qs.due { background: rgba(242, 201, 76, 0.16); color: var(--mark); }
+.qs.wait { background: var(--accent-soft); color: var(--accent); }
+.qs.closed { background: var(--ok-soft); color: var(--ok); }
+.qs.excluded { background: transparent; color: var(--muted); border: 1px dashed var(--line-strong); }
+.exclude-btn { background: none; border: 1px solid var(--line); border-radius: 99px; padding: 1px 10px; font-size: 0.72rem; color: var(--muted); }
+.exclude-btn:hover { border-color: var(--ng); color: var(--ng); }
+.think { margin-top: 14px; }
+.think-label { font-size: 0.8rem; color: var(--muted); }
+.think-bar { height: 4px; border-radius: 99px; background: var(--line); overflow: hidden; margin-top: 6px; }
+.think-bar span { display: block; height: 100%; width: 0; background: var(--accent); }
+.think-bar span.run { animation: think 3s linear forwards; }
+@keyframes think { to { width: 100%; } }
+.q-note { margin-top: 10px; font-size: 0.86rem; color: var(--muted); display: flex; flex-wrap: wrap; gap: 10px; align-items: center; }
+.q-done { display: flex; flex-wrap: wrap; gap: 6px 14px; align-items: center; font-size: 0.86rem; margin-top: 8px; }
+.q-done .okmark { color: var(--ok); font-weight: 700; }
+.result .sched { margin-top: 6px; font-size: 0.84rem; color: var(--text); }
+.check.warmup { border-color: rgba(242, 201, 76, 0.45); background: rgba(242, 201, 76, 0.05); }
+.check.warmup .check-badge { background: var(--mark); color: var(--mark-ink); }
+.check.retry { border-color: rgba(240, 137, 79, 0.5); background: rgba(240, 137, 79, 0.05); }
+.check.retry .check-badge { background: var(--ng-strong); }
+.today-card { border-color: rgba(242, 201, 76, 0.35); }
+.today-card h2 b { color: var(--mark); }
+.queue { display: grid; gap: 6px; margin-top: 8px; font-size: 0.8rem; }
+.queue div { display: flex; justify-content: space-between; gap: 8px; background: var(--surface-2); border-radius: 8px; padding: 5px 10px; }
+.queue div.cur { box-shadow: inset 3px 0 0 var(--accent); }
+.queue .ok { color: var(--ok); }
+.queue .ng { color: var(--ng); }
+.ex-list { display: grid; gap: 8px; margin-top: 10px; }
+.ex-row { display: flex; justify-content: space-between; gap: 10px; align-items: center; background: var(--surface-2); border-radius: 8px; padding: 8px 12px; font-size: 0.86rem; }
+.ex-row span { min-width: 0; overflow-wrap: anywhere; }
+
 /* ===== トースト・紙吹雪 ===== */
 .toast { position: fixed; z-index: 70; left: 50%; bottom: 24px; transform: translateX(-50%); background: var(--text); color: var(--bg); padding: 12px 18px; border-radius: 12px; max-width: calc(100vw - 32px); font-weight: 700; box-shadow: 0 6px 20px rgba(0, 0, 0, 0.35); animation: pop 0.2s; }
 #confetti { position: fixed; inset: 0; width: 100%; height: 100%; pointer-events: none; z-index: 60; }
@@ -459,7 +495,7 @@ main { padding: 28px 20px 70px; }
     <div class="search-results" id="search-results" role="listbox" hidden></div>
   </div>
   <span class="spacer"></span>
-  <span class="hdr-progress" id="hdr-progress">全体の進捗 <span class="meter"><span id="hdr-meter"></span></span><b class="num" id="hdr-pct"></b></span>
+  <span class="hdr-progress" id="hdr-progress">覚えた割合 <span class="meter"><span id="hdr-meter"></span></span><b class="num" id="hdr-pct"></b></span>
   <button class="gear" id="gear" aria-label="設定（学習履歴の書き出し・読み込み・削除）" title="設定">⚙</button>
 </header>
 <main id="app"></main>
@@ -471,12 +507,16 @@ main { padding: 28px 20px 70px; }
 <script>
 "use strict";
 (() => {
-  // ===== 定数 =====
-  const PROGRESS_VERSION = 2;
-  const RUN_SIZE = 10;          // 章末演習・総合演習・復習は1回10問ずつ
-  const READ_CHARS_PER_MINUTE = 400; // 読了目安の見積もり（minutes がない節）
+  // ===== 定数（references/learning-engine.md） =====
+  const PROGRESS_VERSION = 3;
+  const RUN_SIZE = 10;          // 今日の想起・章末演習・総合演習は1回10問まで
+  const THINK_MS = 3000;        // 選択肢を出す前に、問題文だけを見せる時間
+  const ADVANCE_MS = 1200;      // 演習で正解したあと、次の問題へ自動で進むまでの時間
+  const RETRY_GAP = 3;          // 演習で間違えた問題は、3問あとにもう一度出す
+  const MAX_RETRY = 3;          // 同じ回の中でのくり返しは3回まで
+  const WARMUP_SIZE = 2;        // 節を開いたときに出す、ほかの節の期日が来た問題の数
+  const READ_CHARS_PER_MINUTE = 400;
   const KANA = ["ア", "イ", "ウ", "エ", "オ", "カ", "キ", "ク"];
-  const TYPE_LABELS = { choice: "選択", predict: "結果予測", fill: "入力", order: "並べ替え", truefalse: "○×" };
 
   const app = document.getElementById("app");
 
@@ -494,8 +534,9 @@ main { padding: 28px 20px 70px; }
   const finalExam = content.finalExam || [];
   const sectionById = new Map();
   const chapterBySectionId = new Map();
-  const checkInfo = new Map();    // すぐ確認の問題ID → { question, section, item }
-  const drillInfo = new Map();    // 章末演習・総合演習の問題ID → { question, chapter|null }
+  const questionById = new Map();   // すべての問題（すぐ確認・章末演習・総合演習）
+  const checkInfo = new Map();      // すぐ確認の問題ID → { section, item }
+  const drillChapter = new Map();   // 章末演習・総合演習の問題ID → 章（総合演習は null）
   const factById = new Map((content.factsheet || []).map((fact) => [fact.id, fact]));
 
   for (const chapter of chapters) {
@@ -506,24 +547,23 @@ main { padding: 28px 20px 70px; }
       for (const item of section.items) {
         item.kind = item.type === "example" ? "example" : "text";
         item.no = item.kind === "text" ? ++textNo : null;
-        checkInfo.set(item.check.id, { question: item.check, section, item });
+        questionById.set(item.check.id, item.check);
+        checkInfo.set(item.check.id, { section, item });
       }
     }
-    for (const question of chapter.exercise || []) drillInfo.set(question.id, { question, chapter });
+    for (const question of chapter.exercise || []) { questionById.set(question.id, question); drillChapter.set(question.id, chapter); }
   }
-  for (const question of finalExam) drillInfo.set(question.id, { question, chapter: null });
+  for (const question of finalExam) { questionById.set(question.id, question); drillChapter.set(question.id, null); }
   const orderedSections = chapters.flatMap((chapter) => chapter.sections);
-  const allChecks = [...checkInfo.values()].map((info) => info.question);
-  const allDrills = [...drillInfo.values()].map((info) => info.question);
+  const allIds = [...questionById.keys()];
 
-  function chapterNo(chapter) { return chapters.indexOf(chapter) + 1; }
+  const chapterNo = (chapter) => chapters.indexOf(chapter) + 1;
   function sectionCode(section) {
     const chapter = chapterBySectionId.get(section.id);
     return `${chapterNo(chapter)}-${chapter.sections.indexOf(section) + 1}`;
   }
-  function chapterLabel(chapter) { return `第${chapterNo(chapter)}章 ${chapter.title}`; }
-  function itemLabel(item) { return item.kind === "example" ? "例題" : `${item.no}. ${item.title}`; }
-  // refs の1件（"ch1-s2" か "ch1-s2#i3"）を、節と項目に分ける
+  const chapterLabel = (chapter) => `第${chapterNo(chapter)}章 ${chapter.title}`;
+  const itemLabel = (item) => (item.kind === "example" ? "例題" : `${item.no}. ${item.title}`);
   function parseRef(ref) {
     const [sectionId, itemId] = String(ref).split("#");
     const section = sectionById.get(sectionId);
@@ -536,24 +576,49 @@ main { padding: 28px 20px 70px; }
     const base = `${sectionCode(target.section)} ${target.section.title}`;
     return target.item ? `${base} ›「${itemLabel(target.item)}」` : base;
   }
+  // 問題が教科書のどこに属するか（すぐ確認は置かれた項目、演習は refs の1件目）
+  function homeOf(id) {
+    const info = checkInfo.get(id);
+    if (info) return { section: info.section, item: info.item };
+    return parseRef((questionById.get(id).refs || [])[0]);
+  }
+  function scopeLabel(id) {
+    if (checkInfo.has(id)) { const { section } = checkInfo.get(id); return `${sectionCode(section)} ${section.title}`; }
+    const chapter = drillChapter.get(id);
+    return chapter ? `第${chapterNo(chapter)}章 章末演習` : "総合演習";
+  }
 
-  // ===== 日付（端末のローカル日付） =====
-  function today() {
-    const date = new Date();
+  // ===== 日付（端末のローカル日付。?today=YYYY-MM-DD で検証用に上書きできる） =====
+  const debugToday = new URLSearchParams(location.search).get("today");
+  function toDateString(date) {
     const pad = (n) => String(n).padStart(2, "0");
     return `${date.getFullYear()}-${pad(date.getMonth() + 1)}-${pad(date.getDate())}`;
   }
+  function today() {
+    if (debugToday && /^\d{4}-\d{2}-\d{2}$/.test(debugToday)) return debugToday;
+    return toDateString(new Date());
+  }
+  function addDays(dateString, days) {
+    const [y, m, d] = dateString.split("-").map(Number);
+    return toDateString(new Date(y, m - 1, d + days));
+  }
+  function formatDate(dateString) {
+    const [, m, d] = dateString.split("-").map(Number);
+    if (dateString === addDays(today(), 1)) return `明日（${m}/${d}）`;
+    return `${m}/${d}`;
+  }
 
-  // ===== 学習履歴の保存 =====
-  // checks   : すぐ確認の問題ID → "ok" | "ng"（復習の記録は持たない）
-  // questions: 章末演習・総合演習の問題ID → { result: "ok"|"ng", flagged, attempts, lastAnswered }
+  // ===== 学習履歴 =====
+  // questions[id]：status（new／learning／closed／excluded）、track（fast：2回でクローズ／standard：3回）、
+  //                streak（日を変えた正解の数）、due（次に出す日）、lastCounted（最後に数えた日）、wrongDay（最後に間違えた日）、
+  //                everCorrect（一度でも正解した）、attempts、lapses、lastAnswered、prevStatus（出さない前の状態）
   function createEmptyProgress() {
-    return { version: PROGRESS_VERSION, contentId: content.meta.id, checks: {}, questions: {}, memos: {}, lastSectionId: null, stats: { answered: 0, correct: 0 } };
+    return { version: PROGRESS_VERSION, contentId: content.meta.id, questions: {}, rtRatios: [], memos: {}, lastSectionId: null, stats: { answered: 0, correct: 0 } };
   }
   function normalizeProgress(saved) {
     const base = createEmptyProgress();
     if (!saved || saved.version !== PROGRESS_VERSION) return base; // 形の違う古い履歴は引き継がない
-    return { ...base, ...saved, checks: saved.checks || {}, questions: saved.questions || {}, memos: saved.memos || {}, stats: { ...base.stats, ...saved.stats } };
+    return { ...base, ...saved, questions: saved.questions || {}, rtRatios: saved.rtRatios || [], memos: saved.memos || {}, stats: { ...base.stats, ...saved.stats } };
   }
   function loadProgress() {
     try {
@@ -570,39 +635,112 @@ main { padding: 28px 20px 70px; }
       showToast("学習履歴を保存できませんでした。右上の ⚙ 設定から学習履歴を書き出して控えを取ってください。");
     }
   }
-  function countAnswer(isCorrect) {
-    progress.stats.answered += 1;
-    if (isCorrect) progress.stats.correct += 1;
+
+  // ===== 出題の判断（すべてシステムが行う） =====
+  const recOf = (id) => progress.questions[id] || { status: "new", attempts: 0 };
+  // 画面に出す状態：new 未出題 / due 今日出す / wait 次の出題日を待つ / closed 覚えた / excluded 出さない
+  function stateOf(id) {
+    const r = recOf(id);
+    if (r.status === "learning") return r.due <= today() ? "due" : "wait";
+    return r.status;
+  }
+  const isActive = (id) => recOf(id).status !== "excluded";
+  const STATE_TEXT = { new: "未出題", due: "今日出す", wait: "次の出題を待つ", closed: "覚えた", excluded: "出さない" };
+  function stateTag(id) {
+    const s = stateOf(id);
+    const text = s === "wait" ? `次は ${formatDate(recOf(id).due)}` : STATE_TEXT[s];
+    return el("span", { class: `qs ${s}`, text });
   }
 
-  // ===== 状態の判定 =====
-  function checkStatus(questionId) { return progress.checks[questionId] || "new"; }
-  function drillRecord(questionId) { return progress.questions[questionId] || null; }
-  function drillResult(questionId) { const record = drillRecord(questionId); return record ? record.result : "new"; }
-  function sectionChecks(section) { return section.items.map((item) => item.check); }
-  function sectionOkCount(section) { return sectionChecks(section).filter((q) => checkStatus(q.id) === "ok").length; }
-  // 節の完了：すぐ確認にすべて正解した（次の節へ進める）
-  function isSectionDone(section) { return sectionOkCount(section) === section.items.length; }
-  function chapterStatus(chapter) {
-    if (chapter.sections.every(isSectionDone)) return "done";
-    const touched = chapter.sections.some((s) => sectionChecks(s).some((q) => checkStatus(q.id) !== "new"))
-      || (chapter.exercise || []).some((q) => drillResult(q.id) !== "new");
-    return touched ? "learning" : "new";
+  // 回答時間の基準：選択肢などの文字数から見積もり、学習者のふだんの速さで補正する
+  function baseMs(q) {
+    if (q.type === "fill") return 3000 + Math.max(...q.answer.map((a) => a.length)) * 350;
+    if (q.type === "order") return 4000 + q.options.join("").length * 60;
+    if (q.type === "truefalse") return 2500 + (q.code ? 1500 : 0);
+    return 2000 + q.options.join("").length * 50 + (q.code ? 1500 : 0);
   }
-  // 進捗率 = 正解済みの問題 ÷ 全問題（すぐ確認＋章末演習＋総合演習）
+  function personalFactor() {
+    const a = progress.rtRatios;
+    if (a.length < 5) return 1;
+    const sorted = [...a].sort((x, y) => x - y);
+    return Math.min(1.6, Math.max(0.7, sorted[Math.floor(sorted.length / 2)]));
+  }
+  // good：速く正解 / hard：遅い正解、またはその日に間違えたあとの正解 / again：不正解
+  function gradeOf(q, correct, rtMs, id) {
+    if (!correct) return "again";
+    const ratio = rtMs / baseMs(q);
+    progress.rtRatios = [...progress.rtRatios, Math.round(ratio * 100) / 100].slice(-20);
+    if (recOf(id).wrongDay === today()) return "hard";
+    return ratio <= personalFactor() ? "good" : "hard";
+  }
+  // クローズまでの道筋：初回に速く正解 → 翌日もう一度正解でクローズ（2回）。それ以外は日を変えて3回正解（間隔 1日 → 3日）
+  function applyResult(id, grade) {
+    const r = { ...recOf(id) };
+    const d = today();
+    r.attempts = (r.attempts || 0) + 1;
+    r.lastAnswered = d;
+    progress.stats.answered += 1;
+    if (grade !== "again") { progress.stats.correct += 1; r.everCorrect = true; }
+    if (r.status === "excluded") { progress.questions[id] = r; saveProgress(); return r; }
+    if (grade === "again") {
+      if (r.status === "closed") r.reopened = d;
+      r.status = "learning";
+      r.track = "standard";
+      r.streak = 0;
+      r.due = addDays(d, 1);
+      r.wrongDay = d;
+      r.lapses = (r.lapses || 0) + 1;
+    } else if (r.status === "new") {
+      r.status = "learning";
+      r.track = grade === "good" ? "fast" : "standard";
+      r.streak = 1;
+      r.lastCounted = d;
+      r.due = addDays(d, 1);
+    } else if (r.status === "learning" && r.due <= d && r.lastCounted !== d && r.wrongDay !== d) {
+      // 数えるのは、期日が来た日の、その日に間違えていない正解だけ（同じ日の正解・期日前の正解は数えない）
+      r.streak = (r.streak || 0) + 1;
+      r.lastCounted = d;
+      if (r.streak >= (r.track === "fast" ? 2 : 3)) {
+        r.status = "closed";
+        r.closedOn = d;
+        delete r.due;
+      } else {
+        r.due = addDays(d, r.streak === 1 ? 1 : 3);
+      }
+    }
+    progress.questions[id] = r;
+    saveProgress();
+    return r;
+  }
+  function setExcluded(id, on) {
+    const r = { ...recOf(id) };
+    if (on && r.status !== "excluded") { r.prevStatus = r.status; r.status = "excluded"; }
+    if (!on && r.status === "excluded") { r.status = r.prevStatus || "new"; delete r.prevStatus; }
+    progress.questions[id] = r;
+    saveProgress();
+  }
+  const dueIds = () => allIds.filter((id) => stateOf(id) === "due");
+  // 同じ節が続かないように並べ替える（混ぜて出す）
+  function interleave(ids) {
+    const pool = ids.slice();
+    const out = [];
+    while (pool.length) {
+      const last = out.length ? scopeLabel(out[out.length - 1]) : null;
+      const i = pool.findIndex((id) => scopeLabel(id) !== last);
+      out.push(pool.splice(i === -1 ? 0 : i, 1)[0]);
+    }
+    return out;
+  }
+  function sortDue(ids) {
+    return ids.slice().sort((a, b) => (recOf(a).due || "").localeCompare(recOf(b).due || "") || (recOf(b).lapses || 0) - (recOf(a).lapses || 0));
+  }
+  // 節の完了：その節のすぐ確認（出さない問題を除く）すべてに一度は正解した
+  const sectionChecks = (section) => section.items.map((item) => item.check.id).filter(isActive);
+  const isSectionDone = (section) => sectionChecks(section).every((id) => recOf(id).everCorrect);
+  // 進捗＝覚えた（クローズした）問題 ÷ 出題する問題
   function progressPercent() {
-    const total = allChecks.length + allDrills.length;
-    if (!total) return 0;
-    const done = allChecks.filter((q) => checkStatus(q.id) === "ok").length + allDrills.filter((q) => drillResult(q.id) === "ok").length;
-    return Math.floor((done / total) * 100);
-  }
-  function accuracyText() {
-    const { answered, correct } = progress.stats;
-    return answered ? `${Math.round((correct / answered) * 100)}%` : "—";
-  }
-  // 復習リスト：章末演習・総合演習で最後に間違えた問題と、「あとで復習」に登録した問題
-  function reviewIds() {
-    return allDrills.filter((q) => { const r = drillRecord(q.id); return r && (r.result === "ng" || r.flagged); }).map((q) => q.id);
+    const active = allIds.filter(isActive);
+    return active.length ? Math.floor((active.filter((id) => recOf(id).status === "closed").length / active.length) * 100) : 0;
   }
   function readingMinutes(section) {
     if (Number.isInteger(section.minutes) && section.minutes > 0) return section.minutes;
@@ -611,20 +749,33 @@ main { padding: 28px 20px 70px; }
   }
 
   // ===== 正誤判定 =====
-  function normalizeFill(text) { return String(text).normalize("NFKC").toLowerCase().replace(/\s+/g, ""); }
-  function isAnswerCorrect(question, response) {
+  const normalizeFill = (text) => String(text).normalize("NFKC").toLowerCase().replace(/\s+/g, "");
+  function isAnswerCorrect(q, response) {
     if (response === null || response === undefined) return false;
-    switch (question.type) {
+    switch (q.type) {
       case "choice":
-      case "predict": return response === question.answer;
-      case "truefalse": return response === question.answer;
-      case "fill": return question.answer.some((accepted) => normalizeFill(accepted) === normalizeFill(response));
-      case "order": return response.length === question.answer.length && response.every((item, i) => item === question.answer[i]);
+      case "predict":
+      case "truefalse": return response === q.answer;
+      case "fill": return q.answer.some((a) => normalizeFill(a) === normalizeFill(response));
+      case "order": return response.length === q.answer.length && response.every((x, i) => x === q.answer[i]);
       default: return false;
     }
   }
+  function correctAnswerText(q, view) {
+    switch (q.type) {
+      case "choice":
+      case "predict": {
+        const position = view && view.order ? view.order.indexOf(q.answer) : q.answer;
+        return `${KANA[position]}．${q.options[q.answer]}`;
+      }
+      case "truefalse": return q.answer ? "○（正しい）" : "×（誤り）";
+      case "fill": return q.answer.join(" ／ ") + (q.unit || "");
+      case "order": return "\n" + q.answer.map((x, i) => `${i + 1}. ${x}`).join("\n");
+      default: return "";
+    }
+  }
 
-  // ===== 小さなユーティリティ =====
+  // ===== 小さな道具 =====
   function el(tag, attributes = {}, children = []) {
     const node = document.createElement(tag);
     for (const [key, value] of Object.entries(attributes)) {
@@ -644,16 +795,13 @@ main { padding: 28px 20px 70px; }
   function stripTags(html) { const div = document.createElement("div"); div.innerHTML = html; return div.textContent || ""; }
   function shuffled(items) {
     const copy = items.slice();
-    for (let i = copy.length - 1; i > 0; i--) {
-      const j = Math.floor(Math.random() * (i + 1));
-      [copy[i], copy[j]] = [copy[j], copy[i]];
-    }
+    for (let i = copy.length - 1; i > 0; i--) { const j = Math.floor(Math.random() * (i + 1)); [copy[i], copy[j]] = [copy[j], copy[i]]; }
     return copy;
   }
-  function shuffledAvoiding(items, forbiddenOrder) {
+  function shuffledAvoiding(items, forbidden) {
     if (items.length < 2) return items.slice();
     let result;
-    do { result = shuffled(items); } while (result.every((item, i) => item === forbiddenOrder[i]));
+    do { result = shuffled(items); } while (result.every((x, i) => x === forbidden[i]));
     return result;
   }
   function formatClock(totalSeconds) {
@@ -698,12 +846,7 @@ main { padding: 28px 20px 70px; }
     for (let i = 0; i < count; i++) {
       const direction = angle + (Math.random() - 0.5) * spread;
       const speed = power * (0.55 + Math.random() * 0.6);
-      confettiPieces.push({
-        x, y, vx: Math.cos(direction) * speed, vy: Math.sin(direction) * speed,
-        rotation: Math.random() * Math.PI, spin: (Math.random() - 0.5) * 0.4,
-        width: 6 + Math.random() * 6, height: 4 + Math.random() * 5,
-        color: CONFETTI_COLORS[Math.floor(Math.random() * CONFETTI_COLORS.length)], life: 110 + Math.random() * 50,
-      });
+      confettiPieces.push({ x, y, vx: Math.cos(direction) * speed, vy: Math.sin(direction) * speed, rotation: Math.random() * Math.PI, spin: (Math.random() - 0.5) * 0.4, width: 6 + Math.random() * 6, height: 4 + Math.random() * 5, color: CONFETTI_COLORS[Math.floor(Math.random() * CONFETTI_COLORS.length)], life: 110 + Math.random() * 50 });
     }
     if (!confettiRunning) { confettiRunning = true; requestAnimationFrame(drawConfetti); }
   }
@@ -723,29 +866,232 @@ main { padding: 28px 20px 70px; }
     if (confettiPieces.length) requestAnimationFrame(drawConfetti);
     else { confettiRunning = false; confettiContext.clearRect(0, 0, innerWidth, innerHeight); }
   }
-  // 正解したとき：回答した場所から小さなクラッカー
-  function celebrateAt(node) {
-    if (!node) return;
-    const rect = node.getBoundingClientRect();
-    burstConfetti(rect.left + rect.width / 2, rect.top + 10, { count: 60 });
-  }
-  // 節の全問正解・演習の全問正解：画面の両下から大きなクラッカー
+  function celebrateAt(node) { if (!node) return; const rect = node.getBoundingClientRect(); burstConfetti(rect.left + rect.width / 2, rect.top + 10, { count: 60 }); }
   function celebrateBig() {
     burstConfetti(0, innerHeight, { count: 110, angle: -Math.PI / 3, spread: Math.PI / 4, power: 22 });
     burstConfetti(innerWidth, innerHeight, { count: 110, angle: (-2 * Math.PI) / 3, spread: Math.PI / 4, power: 22 });
   }
 
+  // ===== 問いのカード（すぐ確認・演習・今日の想起で共通） =====
+  // 学習者の操作は「答える」と、間違えたときの「次へ」だけ。考える時間・判定・次の出題日はシステムが決める。
+  // opts.record：学習履歴に記録する / opts.practice：練習（記録しない） / opts.mock：模擬試験（正誤を出さない）
+  // opts.onDone(result) / opts.onNext（ある場合は次へボタン。正解なら autoAdvance で自動）/ opts.onExcludeChange(on)
+  let keyTarget = null; // 数字キー・Enter を受けるカード（演習の画面だけ）
+  function buildView(q, shuffle) {
+    if (q.type === "choice" || q.type === "predict") {
+      const indexes = q.options.map((_, i) => i);
+      return { order: shuffle ? shuffled(indexes) : indexes };
+    }
+    if (q.type === "order") return { items: shuffle ? shuffledAvoiding(q.options, q.answer) : q.options.slice() };
+    return {};
+  }
+  function questionCard(id, opts = {}) {
+    const q = questionById.get(id);
+    const view = buildView(q, opts.mock || recOf(id).attempts > 0 || opts.retry);
+    const st = { phase: "idle", startedAt: 0, timer: null, advanceTimer: null };
+    const root = el("div", { class: "qcard" });
+    const head = el("div", { class: "qhead" });
+    const body = el("div");
+    const result = el("div");
+    root.append(head, body, result);
+
+    function renderHead() {
+      const left = el("div", { class: "qhead-l" }, [opts.label || null, opts.mock ? null : stateTag(id)]);
+      const right = opts.mock ? null : el("button", { class: "exclude-btn", type: "button", text: isActive(id) ? "この問題はもう出さない" : "出題に戻す", onclick: toggleExclude });
+      head.replaceChildren(left, right || "");
+    }
+    function toggleExclude() {
+      const on = isActive(id);
+      setExcluded(id, on);
+      clearTimeout(st.timer); clearTimeout(st.advanceTimer);
+      renderHead();
+      if (on) {
+        body.replaceChildren(el("div", { class: "q-note" }, ["この問題は今後出しません。⚙ 設定の「出さない問題」からいつでも戻せます。"]));
+        result.replaceChildren();
+        st.phase = "excluded";
+      } else {
+        st.phase = "idle";
+        renderBody();
+        start();
+      }
+      if (opts.onExcludeChange) opts.onExcludeChange(on);
+    }
+
+    function renderBody() {
+      body.replaceChildren();
+      const prompt = el("div", { class: "q-prompt" });
+      if (q.type === "truefalse") prompt.append("正しければ○、誤りなら×。", el("br"), el("b", { html: `「${q.prompt}」` }));
+      else prompt.innerHTML = q.prompt;
+      body.append(prompt);
+      if (q.code) body.append(el("pre", {}, [el("code", { text: q.code })]));
+      body.append(el("div", { class: "answer-area" }));
+    }
+    const area = () => body.querySelector(".answer-area");
+    // 考える時間：選択肢が要る問題は、問題文だけを見せてから選択肢を出す
+    const needsThink = () => !opts.mock && (q.type === "choice" || q.type === "predict" || q.type === "truefalse");
+    function start() {
+      if (st.phase !== "idle" || !isActive(id) && !opts.mock) return;
+      if (needsThink()) {
+        st.phase = "think";
+        area().replaceChildren(el("div", { class: "think" }, [el("div", { class: "think-label", text: "まず答えを頭に思い浮かべてください。選択肢はこのあと出ます。" }), el("div", { class: "think-bar" }, [el("span", { class: "run" })])]));
+        st.timer = setTimeout(showAnswerUi, THINK_MS);
+      } else {
+        showAnswerUi();
+      }
+    }
+    function showAnswerUi() {
+      st.phase = "answer";
+      st.startedAt = performance.now();
+      const a = area();
+      a.replaceChildren();
+      if (q.type === "choice" || q.type === "predict") {
+        const wide = q.type === "predict" || q.options.some((o) => o.length > 18);
+        a.append(el("div", { class: `choices${wide ? " wide" : ""}` }, view.order.map((optionIndex, position) => el("button", { class: "choice", type: "button", "data-index": String(optionIndex), onclick: () => submit(optionIndex) }, [el("span", { class: "k", text: KANA[position] }), el("span", { class: "t", text: q.options[optionIndex] })]))));
+      } else if (q.type === "truefalse") {
+        a.append(el("div", { class: "ox" }, [[true, "○"], [false, "×"]].map(([value, mark]) => el("button", { type: "button", "data-value": String(value), "aria-label": value ? "正しい（○）" : "誤り（×）", text: mark, onclick: () => submit(value) }))));
+      } else if (q.type === "fill") {
+        const input = el("input", { type: "text", placeholder: "答えを入力して Enter", "aria-label": "答え", autocomplete: "off", spellcheck: "false" });
+        const button = el("button", { class: "btn primary", type: "button", text: "答える", onclick: () => { if (input.value.trim()) submit(input.value); } });
+        input.addEventListener("keydown", (e) => { if (e.key === "Enter" && !e.isComposing && input.value.trim()) submit(input.value); });
+        a.append(el("div", { class: "fillrow" }, [input, q.unit ? el("span", { text: q.unit }) : null, button]));
+        if (opts.focus) input.focus({ preventScroll: true });
+      } else if (q.type === "order") {
+        const items = view.items;
+        const list = el("ol", { class: "order-list" });
+        const draw = () => list.replaceChildren(...items.map((text, i) => el("li", { class: "order-item" }, [
+          el("span", { class: "n", text: String(i + 1) }), el("span", { class: "t", text }),
+          el("span", { class: "mv" }, [
+            el("button", { type: "button", "aria-label": "上へ", text: "↑", disabled: i === 0, onclick: () => { [items[i - 1], items[i]] = [items[i], items[i - 1]]; draw(); } }),
+            el("button", { type: "button", "aria-label": "下へ", text: "↓", disabled: i === items.length - 1, onclick: () => { [items[i + 1], items[i]] = [items[i], items[i + 1]]; draw(); } }),
+          ]),
+        ])));
+        draw();
+        a.append(list, el("div", { class: "submit-row" }, [el("button", { class: "btn primary", type: "button", text: "答え合わせ", onclick: () => submit(items.slice()) })]));
+      }
+    }
+    function submit(response) {
+      if (st.phase !== "answer") return;
+      st.phase = "done";
+      const correct = isAnswerCorrect(q, response);
+      const rtMs = performance.now() - st.startedAt;
+      lockAnswer(response, correct);
+      if (opts.mock) { if (opts.onDone) opts.onDone({ correct, response }); return; }
+      let grade = correct ? "good" : "again";
+      let rec = null;
+      if (opts.record) { grade = gradeOf(q, correct, rtMs, id); rec = applyResult(id, grade); }
+      renderHead();
+      showResult(correct, grade, rec, response);
+      if (opts.onDone) opts.onDone({ correct, grade, response });
+    }
+    function lockAnswer(response, correct) {
+      const a = area();
+      a.querySelectorAll("button, input").forEach((x) => { x.disabled = true; });
+      if (opts.mock) return;
+      a.querySelectorAll(".choice").forEach((b) => {
+        const i = Number(b.dataset.index);
+        if (i === response) { b.classList.add(correct ? "is-ok" : "is-ng"); b.append(el("span", { class: "note", text: correct ? "正解" : "あなたの答え" })); }
+        else if (i === q.answer) { b.classList.add("is-ok"); b.append(el("span", { class: "note", text: "正解" })); }
+        else b.classList.add("dim");
+      });
+      a.querySelectorAll(".ox button").forEach((b) => {
+        const v = b.dataset.value === "true";
+        if (v === response) b.classList.add(correct ? "is-ok" : "is-ng");
+        else if (v === q.answer) b.classList.add("is-ok");
+        else b.classList.add("dim");
+      });
+      const input = a.querySelector("input");
+      if (input) input.classList.add(correct ? "is-ok" : "is-ng");
+      const list = a.querySelector(".order-list");
+      if (list) list.classList.add(correct ? "is-ok" : "is-ng");
+    }
+    function scheduleText(rec) {
+      if (!rec) return null;
+      if (rec.status === "closed") return "🎉 覚えました。この問題はもう出しません（演習で間違えたら、また出します）。";
+      if (rec.status === "learning" && rec.due) return `次は ${formatDate(rec.due)} に出します。`;
+      return null;
+    }
+    function showResult(correct, grade, rec, response) {
+      const box = el("div", { class: `result ${correct ? "ok" : "ng"}` });
+      if (correct) {
+        const note = opts.practice ? "（練習なので、記録はしません）" : grade === "hard" ? (recOf(id).wrongDay === today() ? "間違えたあとの正解なので、日を変えてもう一度出します。" : "少し時間がかかったので、日を変えてもう一度確かめます。") : "";
+        box.append(el("div", { class: "v", text: "✓ 正解" }), note ? el("p", { class: "muted small", text: note }) : null);
+      } else {
+        box.append(el("div", { class: "v" }, ["✕ 不正解　正解は ", el("span", { style: "white-space:pre-line", text: correctAnswerText(q, view) })]));
+        const notes = q.optionNotes;
+        if (notes && typeof response === "number" && notes[response]) box.append(el("p", {}, [el("b", { text: `あなたの答え「${q.options[response]}」：` }), notes[response]]));
+      }
+      box.append(el("p", { html: q.explanation }));
+      const sched = scheduleText(rec);
+      if (sched) box.append(el("p", { class: "sched", text: sched }));
+      if (!correct && opts.retryNote) box.append(el("p", { class: "sched", text: opts.retryNote }));
+      if (opts.refs) {
+        for (const ref of (q.refs || []).filter((r) => parseRef(r)).slice(0, 1)) {
+          const target = parseRef(ref);
+          box.append(el("button", { class: "goto", type: "button", onclick: () => openSection(target.section.id, { itemId: target.item ? target.item.id : null }) }, [el("span", { class: "ic" }, [bookIcon()]), el("span", {}, [el("small", { text: "教科書で確認する" }), el("b", { text: refLabel(ref) })]), el("span", { class: "arr", text: "›" })]));
+        }
+      }
+      result.replaceChildren(box);
+      if (opts.onNext) {
+        const next = el("button", { class: "btn primary", type: "button", text: opts.nextLabel || "次へ ›", onclick: () => goNext() });
+        result.append(el("div", { class: "acts" }, [next, correct && opts.autoAdvance ? el("span", { class: "kbd-hint", text: "自動で次へ進みます" }) : el("span", { class: "kbd-hint", text: "Enter で次へ" })]));
+        if (correct && opts.autoAdvance) st.advanceTimer = setTimeout(goNext, ADVANCE_MS);
+      }
+      if (correct) celebrateAt(box); else shake(root);
+    }
+    function goNext() {
+      clearTimeout(st.advanceTimer);
+      if (st.nexted) return;
+      st.nexted = true;
+      opts.onNext();
+    }
+    // 演習の画面のキー操作：数字キーで選択肢、Enter で次へ
+    function key(e) {
+      if (st.phase === "answer" && /^[1-9]$/.test(e.key)) {
+        const buttons = area().querySelectorAll(".choice, .ox button");
+        const b = buttons[Number(e.key) - 1];
+        if (b && !b.disabled) { b.click(); return true; }
+      }
+      if (e.key === "Enter" && (st.phase === "done" || st.phase === "excluded") && opts.onNext) { goNext(); return true; }
+      return false;
+    }
+
+    renderHead();
+    if (!isActive(id) && !opts.mock) {
+      body.replaceChildren(el("div", { class: "q-note" }, ["この問題は出さない設定です。"]));
+      st.phase = "excluded";
+    } else {
+      renderBody();
+    }
+    // 画面に入ったときから考える時間を数える（読みながら下へ進むすぐ確認のため）
+    const api = { el: root, key, start, stop: () => { clearTimeout(st.timer); clearTimeout(st.advanceTimer); } };
+    if (opts.startNow) start();
+    else waitingCards.add(api);
+    return api;
+  }
+  // まだ始まっていない問いは、画面に入ったときに始める（スクロールのたびに位置を見る）
+  const waitingCards = new Set();
+  function startVisibleCards() {
+    for (const card of waitingCards) {
+      if (!card.el.isConnected) { waitingCards.delete(card); continue; }
+      const r = card.el.getBoundingClientRect();
+      const visible = Math.min(r.bottom, innerHeight) - Math.max(r.top, 0);
+      if (r.height && visible >= Math.min(r.height * 0.3, innerHeight * 0.3)) { waitingCards.delete(card); card.start(); }
+    }
+  }
+  window.addEventListener("scroll", startVisibleCards, { passive: true });
+  window.addEventListener("resize", startVisibleCards);
+  setInterval(() => { if (waitingCards.size) startVisibleCards(); }, 400);
+
   // ===== 画面の切り替え =====
-  // home: ホーム / lesson: 節のページ / run: 演習 / settings: 設定
+  // home: ホーム / lesson: 節のページ / run: 今日の想起・演習・模擬試験 / settings: 設定
   let currentView = "home";
-  let lesson = null;       // 表示中の節のページの状態
-  let run = null;          // 演習の1回分
-  let keyHandler = null;   // 表示中の画面のキー操作
-  let readingObserver = null;
+  let lesson = null;
+  let run = null;
+  let keyHandler = null;
 
   function render(options = {}) {
     keyHandler = null;
-    if (readingObserver) { readingObserver.disconnect(); readingObserver = null; }
+    keyTarget = null;
     app.replaceChildren();
     const gear = document.getElementById("gear");
     if (currentView === "settings") gear.setAttribute("aria-current", "page"); else gear.removeAttribute("aria-current");
@@ -755,6 +1101,7 @@ main { padding: 28px 20px 70px; }
     else if (currentView === "settings") renderSettings();
     renderHeader();
     if (!options.keepScroll) window.scrollTo(0, 0);
+    setTimeout(startVisibleCards, 0);
   }
   function showView(view) {
     if (currentView === "run" && view !== "run" && run && run.kind === "mock" && !run.finished) {
@@ -762,35 +1109,30 @@ main { padding: 28px 20px 70px; }
       return;
     }
     if (view !== currentView) confettiPieces = [];
+    if (run && run.card) run.card.stop();
     currentView = view;
     render();
   }
-  // 節を開く。itemId を渡すとその項目まで移動して光らせる
-  function openSection(sectionId, { mode = "read", itemId = null } = {}) {
+  function openSection(sectionId, { itemId = null } = {}) {
     const section = sectionById.get(sectionId);
     if (!section) return;
-    if (currentView === "run" && run && run.kind === "mock" && !run.finished) { showView("lesson"); return; }
-    lesson = { sectionId, mode, ui: {}, readingItem: section.items[0].id };
+    if (run && run.card) run.card.stop();
+    lesson = { sectionId, retries: {} };
     progress.lastSectionId = sectionId;
     saveProgress();
     currentView = "lesson";
     render();
-    if (itemId) {
-      requestAnimationFrame(() => {
-        const head = document.getElementById(`head-${itemId}`);
-        scrollToEl(document.getElementById(`blk-${itemId}`));
-        flash(head);
-      });
-    }
+    if (itemId) requestAnimationFrame(() => { scrollToEl(document.getElementById(`blk-${itemId}`)); flash(document.getElementById(`head-${itemId}`)); });
   }
   document.getElementById("brand").addEventListener("click", () => showView("home"));
   document.getElementById("gear").addEventListener("click", () => showView("settings"));
   document.addEventListener("keydown", (event) => {
     if (event.key === "Escape") { closeSearch(); closeToc(); }
-    if (!keyHandler || event.isComposing) return;
+    if (event.isComposing || event.ctrlKey || event.metaKey || event.altKey) return;
     const tag = event.target.tagName;
     if (tag === "INPUT" || tag === "TEXTAREA" || (tag === "BUTTON" && event.key === "Enter")) return;
-    keyHandler(event);
+    if (keyTarget && keyTarget.key(event)) { event.preventDefault(); return; }
+    if (keyHandler) keyHandler(event);
   });
 
   // ===== 上部バー =====
@@ -810,9 +1152,9 @@ main { padding: 28px 20px 70px; }
     }
     if (section.keyPoints) searchIndex.push({ section, item: null, label: `${sectionCode(section)} ${section.title} › この節の要点`, text: section.keyPoints.map(stripTags).join(" ／ ") });
   }
-  for (const [id, info] of drillInfo) {
-    const target = parseRef((info.question.refs || [])[0]);
-    if (target) searchIndex.push({ section: target.section, item: target.item, label: `${info.chapter ? chapterLabel(info.chapter) + " 章末演習" : "総合演習"} の問題`, text: stripTags(info.question.prompt), drillId: id });
+  for (const [id, chapter] of drillChapter) {
+    const target = parseRef((questionById.get(id).refs || [])[0]);
+    if (target) searchIndex.push({ section: target.section, item: target.item, label: `${chapter ? chapterLabel(chapter) + " 章末演習" : "総合演習"} の問題`, text: stripTags(questionById.get(id).prompt) });
   }
   const searchInput = document.getElementById("search-input");
   const searchResults = document.getElementById("search-results");
@@ -842,56 +1184,56 @@ main { padding: 28px 20px 70px; }
   // ===== ホーム =====
   function renderHome() {
     const percent = progressPercent();
-    const doneSections = orderedSections.filter(isSectionDone).length;
-    const allDone = doneSections === orderedSections.length;
+    const active = allIds.filter(isActive);
+    const closedN = active.filter((id) => recOf(id).status === "closed").length;
+    const learningN = active.filter((id) => recOf(id).status === "learning").length;
+    const due = dueIds();
     const lastSection = sectionById.get(progress.lastSectionId);
     const resumeSection = lastSection || orderedSections.find((s) => !isSectionDone(s)) || orderedSections[0];
     const resumeChapter = chapterBySectionId.get(resumeSection.id);
+
+    // 今日の想起：期日が来た問題（システムが選ぶ）
+    const nextDue = allIds.filter((id) => stateOf(id) === "wait").map((id) => recOf(id).due).sort()[0];
+    const todayCard = el("section", { class: "panel today-card" }, [
+      el("div", { class: "eyebrow", text: "今日の想起" }),
+      due.length ? el("h2", {}, ["今日の問題 ", el("b", { text: `${due.length}問` })]) : el("h2", { text: "今日の問題はありません" }),
+      el("p", { class: "muted", style: "margin:0 0 12px;font-size:.9rem", text: due.length
+        ? `前に解いた問題のうち、もう一度確かめる日が来たものです。${Math.min(due.length, RUN_SIZE)}問ずつ、節を混ぜて出します。`
+        : nextDue ? `次は ${formatDate(nextDue)} に出す問題があります。` : "節を読んで、すぐ確認を解くと、ここに出る問題が増えていきます。" }),
+      due.length ? el("div", { class: "btn-row" }, [el("button", { class: "btn primary", type: "button", text: "今日の問題を解く ›", onclick: () => startRun("today") })]) : null,
+    ]);
 
     const resume = el("section", { class: "panel resume" }, [
       el("div", { class: "eyebrow", text: lastSection ? "続きから学習" : "ここから学習を始める" }),
       el("div", { class: "muted", style: "font-size:.85rem;margin-top:10px", text: chapterLabel(resumeChapter) }),
       el("h2", { text: `${sectionCode(resumeSection)}　${resumeSection.title}` }),
       el("div", { class: "meta" }, [
-        el("span", { text: `すぐ確認 ${sectionOkCount(resumeSection)} / ${resumeSection.items.length}` }),
+        el("span", { text: `すぐ確認 ${sectionChecks(resumeSection).filter((id) => recOf(id).everCorrect).length} / ${sectionChecks(resumeSection).length}` }),
         el("span", { text: `読了目安 ${readingMinutes(resumeSection)}分` }),
         isSectionDone(resumeSection) ? el("span", { class: "tag ok", text: "完了" }) : null,
       ]),
-      el("div", { class: "btn-row" }, [
-        el("button", { class: "btn primary", text: lastSection ? "学習を再開 ›" : "学習を始める ›", onclick: () => openSection(resumeSection.id) }),
-        el("button", { class: "btn", text: "問題だけ解く", onclick: () => openSection(resumeSection.id, { mode: "quiz" }) }),
-      ]),
-      allDone ? el("p", { class: "muted", style: "margin:14px 0 0;font-size:.85rem", text: "🎉 すべての節のすぐ確認に正解しました。章末演習と総合演習で仕上げましょう。" }) : null,
+      el("div", { class: "btn-row" }, [el("button", { class: "btn primary", text: lastSection ? "学習を再開 ›" : "学習を始める ›", onclick: () => openSection(resumeSection.id) })]),
     ]);
 
     const chapterCards = chapters.map((chapter) => {
-      const status = chapterStatus(chapter);
-      const checks = chapter.sections.flatMap(sectionChecks);
-      const drills = chapter.exercise || [];
-      const okChecks = checks.filter((q) => checkStatus(q.id) === "ok").length;
-      const okDrills = drills.filter((q) => drillResult(q.id) === "ok").length;
-      const ratio = (okChecks + okDrills) / Math.max(1, checks.length + drills.length);
+      const ids = [...chapter.sections.flatMap((s) => s.items.map((it) => it.check.id)), ...(chapter.exercise || []).map((q) => q.id)].filter(isActive);
+      const closed = ids.filter((id) => recOf(id).status === "closed").length;
+      const touched = ids.some((id) => recOf(id).status !== "new");
+      const done = chapter.sections.every(isSectionDone);
       const first = chapter.sections.find((s) => !isSectionDone(s)) || chapter.sections[0];
       return el("button", { class: "chapter-card", onclick: () => openSection(first.id) }, [
-        el("div", { class: "row" }, [
-          el("span", { class: "no", text: `第${chapterNo(chapter)}章` }),
-          el("span", { class: `tag ${status === "done" ? "ok" : status === "learning" ? "now" : ""}`, text: { done: "完了", learning: "学習中", new: "未着手" }[status] }),
-        ]),
+        el("div", { class: "row" }, [el("span", { class: "no", text: `第${chapterNo(chapter)}章` }), el("span", { class: `tag ${done ? "ok" : touched ? "now" : ""}`, text: done ? "読了" : touched ? "学習中" : "未着手" })]),
         el("h3", { text: chapter.title }),
-        el("div", { class: "meter" }, [el("span", { style: `width:${Math.round(ratio * 100)}%` })]),
-        el("div", { class: "foot" }, [
-          el("span", { text: `節 ${chapter.sections.filter(isSectionDone).length} / ${chapter.sections.length}` }),
-          el("span", { text: drills.length ? `章末演習 ${okDrills} / ${drills.length}問` : "章末演習 —" }),
-        ]),
+        el("div", { class: "meter ok" }, [el("span", { style: `width:${ids.length ? Math.round((closed / ids.length) * 100) : 0}%` })]),
+        el("div", { class: "foot" }, [el("span", { text: `節 ${chapter.sections.filter(isSectionDone).length} / ${chapter.sections.length}` }), el("span", { text: `覚えた ${closed} / ${ids.length}問` })]),
       ]);
     });
 
     const drillCards = [];
     if (finalExam.length) {
-      const ok = finalExam.filter((q) => drillResult(q.id) === "ok").length;
       drillCards.push(el("section", { class: "panel drill-card" }, [
-        el("div", {}, [el("h3", { text: "総合演習" }), el("p", { text: `章をまたいだ問題 ${ok} / ${finalExam.length}問 正解。1回${RUN_SIZE}問ずつ出題します。` })]),
-        el("button", { class: "btn primary", text: "挑戦する ›", onclick: () => startRun("final") }),
+        el("div", {}, [el("h3", { text: "総合演習" }), el("p", { text: `章をまたいだ問題 ${finalExam.length}問。まだ解いていない問題から、1回${RUN_SIZE}問ずつ出します。` })]),
+        el("button", { class: "btn", text: "挑戦する ›", onclick: () => startRun("final") }),
       ]));
     }
     if (content.meta.exam) {
@@ -902,41 +1244,23 @@ main { padding: 28px 20px 70px; }
       ]));
     }
 
-    const review = reviewIds();
-    const reviewItems = review.slice(0, 5).map((id) => {
-      const info = drillInfo.get(id);
-      const record = drillRecord(id);
-      return el("div", { class: "review-item" }, [
-        el("div", { class: "row" }, [
-          el("span", { text: info.chapter ? `第${chapterNo(info.chapter)}章 章末演習` : "総合演習" }),
-          el("span", { class: `tag ${record.result === "ng" ? "ng" : "now"}`, text: record.result === "ng" ? "不正解" : "あとで復習" }),
-        ]),
-        el("p", { text: stripTags(info.question.prompt) }),
-      ]);
-    });
-
     app.append(el("div", { class: "wrap home" }, [
       el("div", { class: "home-main" }, [
+        todayCard,
         resume,
         el("section", {}, [el("h2", { class: "sec-title", text: "目次" }), el("div", { class: "cards" }, chapterCards)]),
         drillCards.length ? el("section", {}, [el("h2", { class: "sec-title", text: "演習" }), el("div", { style: "display:grid;gap:14px" }, drillCards)]) : null,
       ]),
       el("aside", { class: "home-side" }, [
         el("section", { class: "panel" }, [
-          el("div", { class: "eyebrow", text: "全体の進捗" }),
+          el("div", { class: "eyebrow", text: "覚えた割合" }),
           el("div", { class: "big-pct num" }, [String(percent), el("small", { text: "%" })]),
-          el("div", { class: "meter" }, [el("span", { style: `width:${percent}%` })]),
+          el("div", { class: "meter ok" }, [el("span", { style: `width:${percent}%` })]),
+          el("p", { class: "muted", style: "font-size:.8rem;margin:10px 0 0;line-height:1.6", text: "日を変えて続けて正解した問題を「覚えた」として数えます（速く正解した問題は2回、それ以外は3回）。" }),
           el("div", { class: "mini-stats" }, [
-            el("div", {}, [el("span", { text: "完了した節" }), el("b", { class: "num", text: `${doneSections} / ${orderedSections.length}` })]),
-            el("div", {}, [el("span", { text: "問題の正答率" }), el("b", { class: "num", text: accuracyText() })]),
+            el("div", {}, [el("span", { text: "覚えた" }), el("b", { class: "num", text: `${closedN} / ${active.length}` })]),
+            el("div", {}, [el("span", { text: "学習中" }), el("b", { class: "num", text: String(learningN) })]),
           ]),
-        ]),
-        el("section", { class: "panel" }, [
-          el("div", { class: "review-head" }, [el("h3", { text: "復習リスト" }), el("span", { class: "muted num", style: "font-size:.85rem", text: `${review.length}問` })]),
-          el("p", { class: "muted", style: "font-size:.8rem;margin:6px 0 0;line-height:1.6", text: "章末演習・総合演習で間違えた問題と、「あとで復習」に登録した問題です。正解するとリストから外れます。" }),
-          review.length ? el("div", { class: "review-list" }, reviewItems) : el("p", { class: "muted", style: "font-size:.85rem", text: "いまは復習する問題はありません。" }),
-          review.length > 5 ? el("p", { class: "muted", style: "font-size:.8rem;margin:-6px 0 12px", text: `ほか ${review.length - 5}問` }) : null,
-          el("button", { class: "btn primary block", text: "復習リストをまとめて解く", disabled: !review.length, onclick: () => startRun("review") }),
         ]),
         el("section", { class: "panel" }, [
           el("h3", { style: "font-size:.95rem;margin:0", text: "この教材のゴール" }),
@@ -960,16 +1284,14 @@ main { padding: 28px 20px 70px; }
       children.push(el("div", { class: "ch" }, [`第${chapterNo(chapter)}章 ${chapter.title}`, el("span", { class: "num", text: `${chapter.sections.filter(isSectionDone).length}/${chapter.sections.length}` })]));
       for (const section of chapter.sections) {
         const isCurrent = section.id === current.id;
-        children.push(el("button", { class: `toc-link${isCurrent ? " current" : ""}`, "aria-current": isCurrent ? "page" : null, onclick: () => openSection(section.id, { mode: lesson.mode }) }, [
+        children.push(el("button", { class: `toc-link${isCurrent ? " current" : ""}`, "aria-current": isCurrent ? "page" : null, onclick: () => openSection(section.id) }, [
           el("span", { class: `st ${isSectionDone(section) ? "done" : isCurrent ? "cur" : ""}`, text: isSectionDone(section) ? "✓" : "" }),
           `${sectionCode(section)} ${section.title}`,
         ]));
       }
     }
     children.push(el("hr"));
-    if ((currentChapter.exercise || []).length) {
-      children.push(el("button", { class: "toc-link", onclick: () => startRun("chapter", currentChapter.id) }, [el("span", { class: "st drill", text: "✓" }), `第${chapterNo(currentChapter)}章 章末演習へ`]));
-    }
+    if ((currentChapter.exercise || []).length) children.push(el("button", { class: "toc-link", onclick: () => startRun("chapter", currentChapter.id) }, [el("span", { class: "st drill", text: "✓" }), `第${chapterNo(currentChapter)}章 章末演習へ`]));
     if (finalExam.length) children.push(el("button", { class: "toc-link", onclick: () => startRun("final") }, [el("span", { class: "st drill", text: "★" }), "総合演習へ"]));
     return el("nav", { class: "panel toc", "aria-label": "目次" }, children);
   }
@@ -980,14 +1302,20 @@ main { padding: 28px 20px 70px; }
     const index = orderedSections.indexOf(section);
     const prev = orderedSections[index - 1];
     const next = orderedSections[index + 1];
-
     const toc = buildToc(section);
     const backdrop = el("div", { class: "toc-backdrop", onclick: closeToc });
     const openToc = () => { toc.classList.add("open"); backdrop.classList.add("open"); };
-
-    const blocks = section.items.map((item, i) => renderBlock(section, item, i));
     const sources = (section.sources || []).map((id) => factById.get(id)).filter(Boolean);
     const prereqs = (section.prerequisites || []).map((id) => sectionById.get(id)).filter(Boolean);
+
+    // 節を開いたら、システムが選んだ問題を本文の前に出す：この節の期日が来た問題（再訪）と、ほかの節の期日が来た問題（ウォームアップ）
+    const ownDue = sectionChecks(section).filter((id) => stateOf(id) === "due" && recOf(id).everCorrect);
+    const otherDue = interleave(sortDue(dueIds().filter((id) => !ownDue.includes(id) && !(checkInfo.get(id) && checkInfo.get(id).section === section)))).slice(0, WARMUP_SIZE);
+    const opening = [];
+    if (ownDue.length) opening.push(blockOf("revisit", "この節の復習", "前に解いたこの節の問題のうち、もう一度確かめる日が来たものです。", ownDue));
+    if (otherDue.length) opening.push(blockOf("warmup", "読む前に思い出す", "ほかの節の問題のうち、もう一度確かめる日が来たものです。", otherDue));
+
+    const blocks = section.items.map((item, i) => renderBlock(section, item, i));
 
     const article = el("article", { class: "panel article" }, [
       el("span", { class: "sec-no", text: sectionCode(section) }),
@@ -997,15 +1325,19 @@ main { padding: 28px 20px 70px; }
         el("span", { text: `すぐ確認 ${section.items.length}問` }),
         prereqs.length ? el("span", { text: `前提：${prereqs.map((p) => `${sectionCode(p)} ${p.title}`).join("、")}` }) : null,
       ]),
-      el("div", { class: "guide" }, [el("b", { text: "⚡" }), "各項目のすぐ下に「すぐ確認」があります。読んだらその場で1問解いてから次へ進みましょう。すべてに正解すると、次の節へ進めます。"]),
+      ...opening,
+      el("div", { class: "guide" }, [el("b", { text: "⚡" }), "各項目のすぐ下に「すぐ確認」があります。問題文を読んで答えを思い浮かべると、選択肢が出ます。すべてに一度正解すると、次の節へ進めます。"]),
       ...blocks,
-      sources.length ? el("details", { class: "sources explain" }, [
+      el("div", { id: "retry-end" }),
+      sources.length ? el("details", { class: "sources" }, [
         el("summary", { text: `参考出典（${sources.length}件）` }),
         el("ul", {}, sources.map((fact) => el("li", {}, [el("span", { class: "rank", text: fact.rank }), fact.claim + " ", el("a", { href: fact.url, target: "_blank", rel: "noopener", text: "出典" })]))),
       ]) : null,
     ]);
 
-    const nextButton = el("button", { class: "btn", id: "next-sec", onclick: () => next ? openSection(next.id, { mode: lesson.mode }) : startRun("chapter", chapter.id) });
+    // 章の最後の節では、次へで章末演習に進む
+    const toExercise = chapter.sections[chapter.sections.length - 1] === section && (chapter.exercise || []).length > 0;
+    const nextButton = el("button", { class: "btn", id: "next-sec", onclick: () => toExercise || !next ? startRun("chapter", chapter.id) : openSection(next.id) });
     const main = el("div", { style: "min-width:0" }, [
       el("div", { class: "lesson-top" }, [
         el("div", { class: "crumbs" }, [
@@ -1013,14 +1345,10 @@ main { padding: 28px 20px 70px; }
           el("button", { class: "link-btn", text: "ホーム", onclick: () => showView("home") }), "›",
           el("span", { text: chapterLabel(chapter) }), "›", el("span", { text: sectionCode(section) }),
         ]),
-        el("div", { class: "seg", role: "group", "aria-label": "表示" }, [
-          el("button", { "aria-pressed": String(lesson.mode === "read"), text: "読んで解く", onclick: () => setLessonMode("read") }),
-          el("button", { "aria-pressed": String(lesson.mode === "quiz"), text: "問題だけ解く", onclick: () => setLessonMode("quiz") }),
-        ]),
       ]),
       article,
       el("div", { class: "pager" }, [
-        prev ? el("button", { class: "btn", text: `‹ ${sectionCode(prev)} ${prev.title}`, onclick: () => openSection(prev.id, { mode: lesson.mode }) }) : el("span"),
+        prev ? el("button", { class: "btn", text: `‹ ${sectionCode(prev)} ${prev.title}`, onclick: () => openSection(prev.id) }) : el("span"),
         nextButton,
       ]),
       el("p", { class: "gate-text", id: "gate-text" }),
@@ -1031,351 +1359,177 @@ main { padding: 28px 20px 70px; }
     let memoTimer = null;
     memo.addEventListener("input", () => {
       clearTimeout(memoTimer);
-      memoTimer = setTimeout(() => {
-        if (memo.value) progress.memos[section.id] = memo.value; else delete progress.memos[section.id];
-        saveProgress();
-      }, 400);
+      memoTimer = setTimeout(() => { if (memo.value) progress.memos[section.id] = memo.value; else delete progress.memos[section.id]; saveProgress(); }, 400);
     });
-
     const side = el("aside", { class: "side" }, [
       el("section", { class: "panel" }, [
         el("h3", { text: "本文とすぐ確認の対応" }),
-        el("div", { class: "score num" }, [el("span", { id: "side-score" }), el("small", { text: `/ ${section.items.length} 問 正解` })]),
-        el("div", { class: "meter ok", style: "margin-top:6px" }, [el("span", { id: "side-meter" })]),
         el("div", { class: "side-gate", id: "side-gate" }),
         el("div", { class: "map", id: "side-map" }),
       ]),
-      section.keyPoints && section.keyPoints.length ? el("section", { class: "panel" }, [
-        el("h3", { text: "この節の要点" }),
-        el("ul", { class: "keypoints" }, section.keyPoints.map((point) => el("li", { html: point }))),
-      ]) : null,
+      section.keyPoints && section.keyPoints.length ? el("section", { class: "panel" }, [el("h3", { text: "この節の要点" }), el("ul", { class: "keypoints" }, section.keyPoints.map((p) => el("li", { html: p })))]) : null,
       el("section", { class: "panel" }, [el("h3", { text: "メモ" }), memo]),
     ]);
 
-    app.append(el("div", { class: `lesson${lesson.mode === "quiz" ? " only-quiz" : ""}`, id: "lesson" }, [toc, main, side]), backdrop);
+    app.append(el("div", { class: "lesson", id: "lesson" }, [toc, main, side]), backdrop);
     updateLessonStatus();
-
-    // いま読んでいる項目を、右の対応表で強調する
-    readingObserver = new IntersectionObserver((entries) => {
-      for (const entry of entries) {
-        const itemId = entry.target.dataset.item;
-        if (entry.isIntersecting && lesson && lesson.readingItem !== itemId) { lesson.readingItem = itemId; updateLessonStatus(); }
-      }
-    }, { rootMargin: "-35% 0px -60% 0px" });
-    document.querySelectorAll(".block").forEach((block) => readingObserver.observe(block));
   }
-  function setLessonMode(mode) {
-    lesson.mode = mode;
-    document.getElementById("lesson").classList.toggle("only-quiz", mode === "quiz");
-    document.querySelectorAll(".seg button").forEach((button, i) => button.setAttribute("aria-pressed", String((i === 0) === (mode === "read"))));
+  function blockOf(kind, title, text, ids) {
+    return el("div", { class: `check ${kind === "warmup" ? "warmup" : ""}` }, [
+      el("div", { class: "check-head" }, [el("span", { class: "check-badge", text: title }), el("span", { text })]),
+      ...ids.map((id) => el("div", { style: "margin-top:10px" }, [questionCard(id, { record: true, label: el("span", { text: scopeLabel(id) }), onDone: () => updateLessonStatus() }).el])),
+    ]);
   }
-
   function renderBlock(section, item, index) {
     const children = [];
     if (item.kind === "example") {
       children.push(el("div", { class: "example", id: `head-${item.id}` }, [
         el("div", { class: "example-head" }, [el("span", { class: "lbl", text: "例題" }), el("b", { html: item.title })]),
-        el("div", { class: "lesson-body explain", html: item.body }),
+        el("div", { class: "lesson-body", html: item.body }),
       ]));
     } else {
       children.push(el("h2", { id: `head-${item.id}`, text: itemLabel(item) }));
-      children.push(el("div", { class: "lesson-body explain", html: item.body }));
+      children.push(el("div", { class: "lesson-body", html: item.body }));
     }
-    children.push(renderCheck(section, item, index));
+    children.push(checkBox(section, item, index));
+    children.push(el("div", { class: "retry-slot", "data-after": item.id }));
     return el("section", { class: "block", id: `blk-${item.id}`, "data-item": item.id }, children);
   }
-
-  // すぐ確認の画面上の状態：answering（解答中）/ wrong（不正解。正解は見せない）/ correct（正解）/ solved（以前に正解済み）
-  function checkUi(question) {
-    if (!lesson.ui[question.id]) lesson.ui[question.id] = { phase: checkStatus(question.id) === "ok" ? "solved" : "answering", view: buildView(question, false) };
-    return lesson.ui[question.id];
-  }
-  function renderCheck(section, item, index) {
-    const question = item.check;
-    const ui = checkUi(question);
+  // すぐ確認：初めて解くときは記録する。もう解いた問題は、出題日が来たら上の「この節の復習」に出るので、ここでは練習として解ける
+  function checkBox(section, item, index) {
+    const id = item.check.id;
     const isExample = item.kind === "example";
-    const box = el("div", { class: `check${ui.phase === "correct" || ui.phase === "solved" ? " is-ok" : ui.phase === "wrong" ? " is-ng" : ""}`, id: `chk-${question.id}` });
-    box.append(el("div", { class: "check-head" }, [
-      el("span", { class: "check-badge", text: `⚡ すぐ確認 ${index + 1}${isExample ? "　類題" : ""}` }),
-      el("span", { text: isExample ? "「例題」と同じ考え方で" : `「${itemLabel(item)}」から` }),
-      checkStatus(question.id) === "ng" && ui.phase === "answering" ? el("span", { class: "tag ng", text: "前回は不正解" }) : null,
-    ]));
-    box.append(promptNode(question, "check-q"));
-
-    if (ui.phase === "solved") {
-      box.append(el("div", { class: "result ok" }, [
-        el("div", { class: "v", text: "✓ 正解済み" }),
-        el("p", { html: question.explanation }),
-        el("div", { class: "acts" }, [el("button", { class: "btn small", text: "↻ もう一度解いてみる（練習）", onclick: () => retryCheck(section, item, index) })]),
-      ]));
+    const box = el("div", { class: "check", id: `chk-${id}` }, [
+      el("div", { class: "check-head" }, [
+        el("span", { class: "check-badge", text: `⚡ すぐ確認 ${index + 1}${isExample ? "　類題" : ""}` }),
+        el("span", { text: isExample ? "「例題」と同じ考え方で" : `「${itemLabel(item)}」から` }),
+      ]),
+    ]);
+    const r = recOf(id);
+    if (r.everCorrect || r.status === "excluded") {
+      const holder = el("div");
+      const summary = el("div", { class: "q-done" }, [
+        r.status === "excluded" ? null : el("span", { class: "okmark", text: "✓ 正解済み" }),
+        stateTag(id),
+        el("button", { class: "link-btn", type: "button", text: r.status === "excluded" ? "問題を見る" : "練習で解く（記録しない）", onclick: () => { holder.replaceChildren(questionCard(id, { practice: true, onDone: () => updateLessonStatus(), onExcludeChange: () => updateLessonStatus() }).el); setTimeout(startVisibleCards, 0); } }),
+      ]);
+      holder.append(summary);
+      box.append(holder);
       return box;
     }
-
-    const answered = ui.phase !== "answering";
-    box.append(answerControls(question, ui.view, {
-      disabled: answered,
-      response: ui.response,
-      reveal: false, // すぐ確認では、正解するまで正解を見せない
-      onSubmit: (response) => submitCheck(section, item, index, response),
-    }));
-    if (question.hint && ui.phase !== "correct") {
-      if (ui.hintOpen) box.append(el("div", { class: "hint", text: `💡 ${question.hint}` }));
-      else box.append(el("div", { class: "submit-row" }, [el("button", { class: "btn small", text: "💡 ヒント", onclick: () => { ui.hintOpen = true; replaceCheck(section, item, index); } })]));
-    }
-
-    if (ui.phase === "wrong") {
-      box.append(el("div", { class: "result ng" }, [
-        el("div", { class: "v", text: "✕ 不正解" }),
-        el("p", { text: "どこで間違えたかを本文で確かめてから、もう一度解いてみましょう。" }),
-        el("div", { class: "acts" }, [
-          el("button", { class: "btn", text: `📖 「${itemLabel(item)}」を読み直す`, onclick: () => {
-            setLessonMode("read");
-            const head = document.getElementById(`head-${item.id}`);
-            scrollToEl(head, "center");
-            flash(head);
-          } }),
-          el("button", { class: "btn primary", text: "↻ もう一度解く", onclick: () => retryCheck(section, item, index) }),
-        ]),
-      ]));
-    } else if (ui.phase === "correct") {
-      const nextItem = section.items[index + 1];
-      const done = isSectionDone(section);
-      const nextSection = orderedSections[orderedSections.indexOf(section) + 1];
-      let action = null;
-      if (done) {
-        action = nextSection
-          ? el("button", { class: "btn primary", text: `🔓 全問正解！ 次の節「${nextSection.title}」へ ›`, onclick: () => openSection(nextSection.id, { mode: lesson.mode }) })
-          : el("button", { class: "btn primary", text: "🔓 全問正解！ 章末演習へ ›", onclick: () => startRun("chapter", chapterBySectionId.get(section.id).id) });
-      } else if (nextItem) {
-        action = el("button", { class: "btn primary", text: "次の項目へ ↓", onclick: () => scrollToEl(document.getElementById(`blk-${nextItem.id}`)) });
-      } else {
-        const firstOpen = section.items.find((it) => checkStatus(it.check.id) !== "ok");
-        action = firstOpen ? el("button", { class: "btn", text: `まだ正解していない「${itemLabel(firstOpen)}」へ ↑`, onclick: () => scrollToEl(document.getElementById(`blk-${firstOpen.id}`)) }) : null;
-      }
-      box.append(el("div", { class: "result ok" }, [
-        el("div", { class: "v", text: "✓ 正解" }),
-        el("p", { html: question.explanation }),
-        action ? el("div", { class: "acts" }, [action]) : null,
-      ]));
-    }
+    box.append(questionCard(id, {
+      record: true,
+      retryNote: "この問題は、次の項目を読んだあとにもう一度出します。",
+      onDone: (res) => {
+        updateLessonStatus();
+        if (!res.correct) queueRetry(section, item, id);
+        else if (isSectionDone(section)) { setTimeout(celebrateBig, 250); showToast("🔓 すぐ確認に全問正解しました。次の節へ進めます。"); }
+      },
+      onExcludeChange: () => updateLessonStatus(),
+    }).el);
     return box;
   }
-  function replaceCheck(section, item, index) {
-    const old = document.getElementById(`chk-${item.check.id}`);
-    const fresh = renderCheck(section, item, index);
-    old.replaceWith(fresh);
-    return fresh;
-  }
-  function retryCheck(section, item, index) {
-    lesson.ui[item.check.id] = { phase: "answering", view: buildView(item.check, true), hintOpen: lesson.ui[item.check.id].hintOpen };
-    const box = replaceCheck(section, item, index);
-    const first = box.querySelector("input, .choice, .ox button, .order-item button");
-    if (first) first.focus({ preventScroll: true });
-  }
-  function submitCheck(section, item, index, response) {
-    const question = item.check;
-    const ui = checkUi(question);
-    const isCorrect = isAnswerCorrect(question, response);
-    const wasDone = isSectionDone(section);
-    countAnswer(isCorrect);
-    if (isCorrect) progress.checks[question.id] = "ok";
-    else if (checkStatus(question.id) !== "ok") progress.checks[question.id] = "ng"; // 一度正解した問題は、練習で間違えても戻さない
-    saveProgress();
-    ui.phase = isCorrect ? "correct" : "wrong";
-    ui.response = response;
-    const box = replaceCheck(section, item, index);
-    updateLessonStatus();
-    renderHeader();
-    if (isCorrect) {
-      celebrateAt(box.querySelector(".result"));
-      if (!wasDone && isSectionDone(section)) {
-        setTimeout(celebrateBig, 250);
-        showToast("🔓 すぐ確認に全問正解しました。次の節へ進めます。");
-      }
-    } else {
-      shake(box);
-    }
+  // 間違えたすぐ確認は、次の項目のあと（最後の項目なら節の終わり）にもう一度出す
+  function queueRetry(section, item, id) {
+    const count = (lesson.retries[id] || 0) + 1;
+    if (count > MAX_RETRY) return;
+    lesson.retries[id] = count;
+    const i = section.items.indexOf(item);
+    const nextItem = section.items[i + 1];
+    const slot = nextItem ? document.querySelector(`.retry-slot[data-after="${nextItem.id}"]`) : document.getElementById("retry-end");
+    if (!slot) return;
+    slot.append(el("div", { class: "check retry" }, [
+      el("div", { class: "check-head" }, [el("span", { class: "check-badge", text: "↻ もう一度" }), el("span", { text: `さっき間違えた「${itemLabel(item)}」の問題です` })]),
+      questionCard(id, {
+        record: true, retry: true,
+        retryNote: "日を変えて、もう一度出します。",
+        onDone: (res) => {
+          updateLessonStatus();
+          if (!res.correct) queueRetry(section, nextItem || item, id);
+          else if (isSectionDone(section)) { setTimeout(celebrateBig, 250); showToast("🔓 すぐ確認に全問正解しました。次の節へ進めます。"); }
+        },
+        onExcludeChange: () => updateLessonStatus(),
+      }).el,
+    ]));
+    setTimeout(startVisibleCards, 0);
   }
   function updateLessonStatus() {
+    if (currentView !== "lesson" || !lesson) return;
     const section = sectionById.get(lesson.sectionId);
-    const ok = sectionOkCount(section);
-    const left = section.items.length - ok;
+    const ids = sectionChecks(section);
+    const left = ids.filter((id) => !recOf(id).everCorrect).length;
     const index = orderedSections.indexOf(section);
     const next = orderedSections[index + 1];
     const chapter = chapterBySectionId.get(section.id);
-    document.getElementById("side-score").textContent = ok;
-    document.getElementById("side-meter").style.width = `${(ok / section.items.length) * 100}%`;
-
-    // 次の節へのゲート：すぐ確認に全問正解するまで進めない
     const nextButton = document.getElementById("next-sec");
-    const target = next ? `${sectionCode(next)} ${next.title}` : (chapter.exercise || []).length ? `第${chapterNo(chapter)}章 章末演習` : null;
+    const toExercise = chapter.sections[chapter.sections.length - 1] === section && (chapter.exercise || []).length > 0;
+    const target = toExercise ? `第${chapterNo(chapter)}章 章末演習` : next ? `${sectionCode(next)} ${next.title}` : null;
     nextButton.hidden = !target;
     nextButton.disabled = left > 0;
     nextButton.className = `btn${left ? "" : " primary"}`;
     nextButton.textContent = `${left ? "🔒 " : ""}${target} ›`;
     const gate = document.getElementById("gate-text");
-    gate.innerHTML = "";
+    gate.replaceChildren(left ? "すぐ確認すべてに一度正解すると、次へ進めます（あと " : "🔓 次へ進めます", left ? el("b", { text: String(left) }) : null, left ? " 問）" : null);
     gate.classList.toggle("open", left === 0);
-    if (left) gate.append(`すぐ確認 ${section.items.length}問すべてに正解すると、次へ進めます（あと `, el("b", { text: String(left) }), " 問）");
-    else gate.append("🔓 全問正解しました。次へ進めます");
     const sideGate = document.getElementById("side-gate");
-    sideGate.innerHTML = "";
+    sideGate.replaceChildren(left ? "🔒 次へ進むまで あと " : "🔓 次へ進めます", left ? el("b", { text: String(left) }) : null, left ? " 問正解" : null);
     sideGate.classList.toggle("open", left === 0);
-    if (left) sideGate.append("🔒 次へ進むまで あと ", el("b", { text: String(left) }), " 問正解");
-    else sideGate.append("🔓 次へ進めます");
-
-    const labels = { new: ["未回答", ""], ok: ["正解", "ok"], ng: ["不正解", "ng"] };
-    document.getElementById("side-map").replaceChildren(...section.items.map((item, i) => {
-      const [text, cls] = labels[checkStatus(item.check.id)];
-      return el("button", { class: lesson.readingItem === item.id ? "active" : "", onclick: () => scrollToEl(document.getElementById(`blk-${item.id}`)) }, [
-        el("span", {}, [el("small", { text: itemLabel(item) }), el("b", { text: `すぐ確認 ${i + 1}（${TYPE_LABELS[item.check.type]}）` })]),
-        el("span", { class: `tag ${cls}`, text }),
-      ]);
-    }));
+    renderHeader();
+    document.getElementById("side-map").replaceChildren(...section.items.map((item) => el("button", { type: "button", onclick: () => scrollToEl(document.getElementById(`blk-${item.id}`)) }, [
+      el("span", {}, [el("small", { text: itemLabel(item) }), el("b", { text: recOf(item.check.id).everCorrect ? "正解済み" : "未正解" })]),
+      stateTag(item.check.id),
+    ])));
   }
 
-  // ===== 解答の部品（すぐ確認・演習で共通） =====
-  // 表示順。retry（解き直し・2回目以降）のときは選択肢と並べ替え項目をシャッフルする
-  function buildView(question, shuffle) {
-    if (question.type === "choice" || question.type === "predict") {
-      const indexes = question.options.map((_, i) => i);
-      return { order: shuffle ? shuffled(indexes) : indexes };
-    }
-    if (question.type === "order") return { items: shuffle ? shuffledAvoiding(question.options, question.answer) : question.options.slice() };
-    return { text: "" };
-  }
-  function promptNode(question, className) {
-    const node = el("div", { class: className });
-    if (question.type === "truefalse") {
-      node.append("正しければ○、誤りなら×。", el("br"), el("b", { html: `「${question.prompt}」` }));
-    } else {
-      node.innerHTML = question.prompt;
-    }
-    const wrap = el("div", {}, [node]);
-    if (question.code) wrap.append(el("pre", {}, [el("code", { text: question.code })]));
-    if (question.type === "order") wrap.append(el("p", { class: "muted", style: "font-size:.8rem;margin:6px 0 0", text: "↑↓ で並べ替えてから「答え合わせ」を押してください。" }));
-    return wrap;
-  }
-  // reveal: 解答後に正解を示すか（演習は示す。すぐ確認は示さない）
-  function answerControls(question, view, { disabled, response, reveal, onSubmit, mock = false }) {
-    const answered = disabled && response !== undefined;
-    const correct = answered && isAnswerCorrect(question, response);
-    if (question.type === "choice" || question.type === "predict") {
-      const long = question.type === "predict" || question.options.some((o) => o.length > 18);
-      return el("div", { class: `choices${long ? " wide" : ""}` }, view.order.map((optionIndex, position) => {
-        let cls = "choice";
-        let note = null;
-        if (answered && !mock) {
-          if (optionIndex === response) { cls += correct ? " is-ok" : " is-ng"; note = correct ? "正解" : "あなたの解答"; }
-          else if (reveal && optionIndex === question.answer) { cls += " is-ok"; note = "正解"; }
-          else cls += " dim";
-        }
-        return el("button", { class: cls, disabled: disabled, "data-key": String(position + 1), onclick: () => onSubmit(optionIndex) }, [
-          el("span", { class: "k", text: KANA[position] }), el("span", { class: "t", text: question.options[optionIndex] }), note ? el("span", { class: "note", text: note }) : null,
-        ]);
-      }));
-    }
-    if (question.type === "truefalse") {
-      return el("div", { class: "ox" }, [[true, "○"], [false, "×"]].map(([value, mark], position) => {
-        let cls = "";
-        if (answered && !mock) {
-          if (value === response) cls = correct ? "is-ok" : "is-ng";
-          else if (reveal && value === question.answer) cls = "is-ok";
-          else cls = "dim";
-        }
-        return el("button", { class: cls, disabled, "data-key": String(position + 1), "aria-label": value ? "正しい（○）" : "誤り（×）", text: mark, onclick: () => onSubmit(value) });
-      }));
-    }
-    if (question.type === "fill") {
-      const input = el("input", { type: "text", placeholder: "答えを入力", "aria-label": "答え", autocomplete: "off", spellcheck: "false", disabled, class: answered && !mock ? (correct ? "is-ok" : "is-ng") : null });
-      input.value = answered ? response : view.text || "";
-      const button = el("button", { class: "btn", text: "答え合わせ", disabled: disabled || !input.value.trim(), onclick: () => onSubmit(input.value) });
-      input.addEventListener("input", () => { view.text = input.value; button.disabled = !input.value.trim(); button.classList.toggle("primary", Boolean(input.value.trim())); });
-      input.addEventListener("keydown", (event) => { if (event.key === "Enter" && !event.isComposing && input.value.trim()) button.click(); });
-      return el("div", { class: "fillrow" }, [input, question.unit ? el("span", { text: question.unit }) : null, disabled ? null : button]);
-    }
-    if (question.type === "order") {
-      const items = answered ? response : view.items;
-      const list = el("ol", { class: `order-list${answered && !mock ? (correct ? " is-ok" : " is-ng") : ""}` });
-      const draw = () => list.replaceChildren(...items.map((text, i) => el("li", { class: "order-item" }, [
-        el("span", { class: "n", text: String(i + 1) }), el("span", { class: "t", text }),
-        disabled ? null : el("span", { class: "mv" }, [
-          el("button", { "aria-label": "上へ", text: "↑", disabled: i === 0, onclick: () => { [items[i - 1], items[i]] = [items[i], items[i - 1]]; draw(); } }),
-          el("button", { "aria-label": "下へ", text: "↓", disabled: i === items.length - 1, onclick: () => { [items[i + 1], items[i]] = [items[i], items[i + 1]]; draw(); } }),
-        ]),
-      ])));
-      draw();
-      return el("div", {}, [list, disabled ? null : el("div", { class: "submit-row" }, [el("button", { class: "btn primary", text: "答え合わせ", onclick: () => onSubmit(items.slice()) })])]);
-    }
-    return el("div");
-  }
-  // 正解の文字列（演習の結果に出す）
-  function correctAnswerText(question, view) {
-    switch (question.type) {
-      case "choice":
-      case "predict": {
-        const position = view && view.order ? view.order.indexOf(question.answer) : question.answer;
-        return `${KANA[position]}．${question.options[question.answer]}`;
-      }
-      case "truefalse": return question.answer ? "○（正しい）" : "×（誤り）";
-      case "fill": return question.answer.join(" ／ ");
-      case "order": return "\n" + question.answer.map((item, i) => `${i + 1}. ${item}`).join("\n");
-      default: return "";
-    }
-  }
-
-  // ===== 演習（章末演習・総合演習・復習・模擬試験） =====
-  // kind: chapter（章末演習）/ final（総合演習）/ review（復習リスト）/ mock（模擬試験。記録しない）
+  // ===== 今日の想起・演習・模擬試験 =====
+  // kind: today（期日が来た問題）/ chapter（章末演習）/ final（総合演習）/ mock（模擬試験。記録しない）
   function startRun(kind, chapterId = null) {
+    const chapter = chapterId ? chapters.find((c) => c.id === chapterId) : null;
     let ids;
     let title;
     let label;
-    const chapter = chapterId ? chapters.find((c) => c.id === chapterId) : null;
-    // 未解答 → 不正解 → 正解済み の順に、1回10問
-    const pick = (questions) => {
-      const byResult = (result) => questions.filter((q) => drillResult(q.id) === result).map((q) => q.id);
-      return [...byResult("new"), ...shuffled(byResult("ng")), ...shuffled(byResult("ok"))].slice(0, RUN_SIZE);
+    // 演習：まだ解いていない問題 → 期日が来た問題 の順（覚えた問題・出さない問題は出さない）
+    const pickDrill = (questions) => {
+      const list = questions.map((q) => q.id).filter(isActive);
+      return [...list.filter((id) => stateOf(id) === "new"), ...sortDue(list.filter((id) => stateOf(id) === "due"))].slice(0, RUN_SIZE);
     };
-    if (kind === "chapter") { ids = pick(chapter.exercise || []); title = "章末演習"; label = chapterLabel(chapter); }
-    else if (kind === "final") { ids = pick(finalExam); title = "総合演習"; label = "章をまたいだ問題"; }
-    else if (kind === "review") { ids = reviewIds().slice(0, RUN_SIZE); title = "復習リスト"; label = "間違えた問題・あとで復習"; }
-    else { ids = shuffled(allDrills.map((q) => q.id)).slice(0, content.meta.exam.questionCount); title = "模擬試験"; label = `${content.meta.exam.minutes}分`; }
-    if (!ids.length) { showToast("いま解ける問題はありません。"); return; }
+    if (kind === "today") { ids = interleave(sortDue(dueIds())).slice(0, RUN_SIZE); title = "今日の想起"; label = "もう一度確かめる日が来た問題"; }
+    else if (kind === "chapter") { ids = pickDrill(chapter.exercise || []); title = "章末演習"; label = chapterLabel(chapter); }
+    else if (kind === "final") { ids = pickDrill(finalExam); title = "総合演習"; label = "章をまたいだ問題"; }
+    else { ids = shuffled([...drillChapter.keys()].filter(isActive)).slice(0, content.meta.exam.questionCount); title = "模擬試験"; label = `${content.meta.exam.minutes}分`; }
+    if (!ids.length) { showToast(kind === "today" ? "今日解く問題はありません。" : "いま出す問題はありません。まだ覚えていない問題は、出題日が来たら「今日の想起」に出ます。"); return; }
     const backSection = currentView === "lesson" && lesson ? lesson.sectionId : null;
-    run = {
-      kind, chapterId, ids, title, label, backSection,
-      views: Object.fromEntries(ids.map((id) => [id, buildView(drillInfo.get(id).question, kind === "mock" || Boolean(drillRecord(id)))])),
-      answers: {}, cursor: 0, shown: 0, startedAt: Date.now(), finished: false, celebrated: false,
-    };
+    run = { kind, chapterId, title, label, backSection, queue: ids.slice(), retries: {}, log: [], current: null, startedAt: Date.now(), finished: false, celebrated: false, total: ids.length };
     confettiPieces = [];
     currentView = "run";
-    render();
+    advanceRun(true);
   }
-  function runAnsweredCount() { return Object.keys(run.answers).length; }
-  function finishRun() { run.finished = true; render(); }
+  function advanceRun(first = false) {
+    if (run.card) run.card.stop();
+    run.current = run.queue.shift() || null;
+    if (!run.current) run.finished = true;
+    if (first) render(); else render({ keepScroll: false });
+  }
+  function finishRun() { if (run.card) run.card.stop(); run.finished = true; render(); }
   function leaveRun() {
     if (run.kind === "mock" && !run.finished) { finishRun(); return; }
     const back = run.backSection;
+    if (run.card) run.card.stop();
     run = null;
     if (back) openSection(back); else showView("home");
   }
-
   function renderRun() {
     if (!run) { currentView = "home"; renderHome(); return; }
-    const total = run.ids.length;
-    const isMock = run.kind === "mock";
-    const answeredCount = runAnsweredCount();
+    const answered = run.log.length;
     const bar = el("div", { class: "run-bar" }, [
-      el("button", { class: "btn", text: isMock && !run.finished ? "‹ 採点して終了" : run.backSection ? "‹ 教科書に戻る" : "‹ ホームへ", onclick: leaveRun }),
+      el("button", { class: "btn", text: run.kind === "mock" && !run.finished ? "‹ 採点して終了" : run.backSection ? "‹ 教科書に戻る" : "‹ ホームへ", onclick: leaveRun }),
       el("div", { class: "ttl" }, [el("small", { text: run.label }), el("b", { text: run.title })]),
       el("div", { class: "run-prog" }, [
-        el("b", { class: "num", text: `${Math.min(run.shown + 1, total)} / ${total}問` }),
-        el("span", { class: "meter" }, [el("span", { style: `width:${(answeredCount / total) * 100}%` })]),
+        el("b", { class: "num", text: run.finished ? `${answered}問` : `${answered + 1}問目（残り ${run.queue.length}問）` }),
         el("span", { class: "num", id: "run-time", text: runTimeText() }),
       ]),
     ]);
-    const card = run.finished ? renderRunResult() : renderRunCard();
-    app.append(bar, el("div", { class: "run" }, [card, renderRunSide()]));
+    app.append(bar, el("div", { class: "run" }, [run.finished ? renderRunResult() : renderRunCard(), renderRunSide()]));
   }
   function runTimeText() {
     const elapsed = (Date.now() - run.startedAt) / 1000;
@@ -1386,201 +1540,108 @@ main { padding: 28px 20px 70px; }
     if (currentView !== "run" || !run || run.finished) return;
     const node = document.getElementById("run-time");
     if (node) node.textContent = runTimeText();
-    if (run.kind === "mock" && (Date.now() - run.startedAt) / 1000 >= content.meta.exam.minutes * 60) {
-      showToast("制限時間になりました。採点します。");
-      finishRun();
-    }
+    if (run.kind === "mock" && (Date.now() - run.startedAt) / 1000 >= content.meta.exam.minutes * 60) { showToast("制限時間になりました。採点します。"); finishRun(); }
   }, 1000);
-
   function renderRunCard() {
-    const id = run.ids[run.shown];
-    const { question } = drillInfo.get(id);
-    const view = run.views[id];
-    const answer = run.answers[id];
+    const id = run.current;
     const isMock = run.kind === "mock";
-    const answered = Boolean(answer) && !isMock;
-    const scope = parseRef((question.refs || [])[0]);
-    const card = el("section", { class: "panel card", id: "run-card" }, [
-      el("div", { class: "qtop" }, [el("b", { text: `問題 ${run.shown + 1}` }), scope ? el("span", { class: "muted", text: `出題範囲：${sectionCode(scope.section)} ${scope.section.title}` }) : null]),
-      promptNode(question, "stem"),
-      answerControls(question, view, {
-        disabled: answered, response: answer ? answer.response : undefined, reveal: true, mock: isMock,
-        onSubmit: (response) => submitRun(id, response),
-      }),
-    ]);
-    if (!answered) {
-      card.append(el("div", { class: "submit-row" }, [el("span", { class: "kbd-hint", text: question.type === "choice" || question.type === "predict" || question.type === "truefalse" ? "数字キーでも選べます" : "" })]));
-      keyHandler = (event) => {
-        const button = card.querySelector(`[data-key="${event.key}"]`);
-        if (button && !button.disabled) button.click();
-      };
-      return card;
-    }
-    const record = drillRecord(id);
-    const refs = (question.refs || []).filter((ref) => parseRef(ref)).slice(0, 2);
-    const flag = el("button", { class: "btn flag" });
-    const drawFlag = () => {
-      const r = drillRecord(id);
-      const inList = r.result === "ng" || r.flagged;
-      flag.setAttribute("aria-pressed", String(inList));
-      flag.textContent = r.result === "ng" ? "⚑ 復習リストに追加済み" : r.flagged ? "⚑ 復習リストに登録済み" : "⚑ あとで復習";
-      flag.disabled = r.result === "ng";
-    };
-    flag.addEventListener("click", () => { record.flagged = !record.flagged; saveProgress(); drawFlag(); });
-    drawFlag();
-    const nextButton = el("button", { class: "btn primary", text: runAnsweredCount() === run.ids.length ? "結果を見る ›" : "次の問題へ ›", onclick: advanceRun });
-    card.append(
-      el("div", { class: `result ${answer.isCorrect ? "ok" : "ng"}` }, [
-        el("div", { class: "v" }, answer.isCorrect ? ["✓ 正解"] : ["✕ 不正解　正解は ", el("span", { class: "answer-text", text: correctAnswerText(question, view) })]),
-        el("p", { html: question.explanation }),
-      ]),
-      ...refs.map((ref) => {
-        const target = parseRef(ref);
-        return el("button", { class: "goto", onclick: () => openSection(target.section.id, { itemId: target.item ? target.item.id : null }) }, [
-          el("span", { class: "ic" }, [bookIcon()]),
-          el("span", {}, [el("small", { text: "教科書で確認する" }), el("b", { text: refLabel(ref) })]),
-          el("span", { class: "arr", text: "›" }),
-        ]);
-      }),
-      el("div", { class: "run-actions" }, [flag, el("div", { class: "btn-row" }, [el("span", { class: "kbd-hint", text: "Enter で次へ" }), nextButton])]),
-    );
-    keyHandler = (event) => { if (event.key === "Enter") nextButton.click(); };
-    return card;
+    const isRetry = (run.retries[id] || 0) > 0;
+    const card = questionCard(id, {
+      record: !isMock, mock: isMock, retry: isRetry, startNow: true, focus: true, refs: true, autoAdvance: true,
+      label: el("span", { text: `${isRetry ? "↻ もう一度 ・ " : ""}${scopeLabel(id)}` }),
+      retryNote: isMock ? null : "このあと、もう一度出します。",
+      onDone: (res) => {
+        run.log.push({ id, correct: res.correct, response: res.response, retry: isRetry });
+        if (isMock) { advanceRun(); return; }
+        // 間違えた問題は、3問あとにもう一度出す（同じ回で3回まで）
+        if (!res.correct && (run.retries[id] || 0) < MAX_RETRY) {
+          run.retries[id] = (run.retries[id] || 0) + 1;
+          run.queue.splice(Math.min(RETRY_GAP, run.queue.length), 0, id);
+        }
+        renderRunSideInto();
+      },
+      onNext: () => advanceRun(),
+      onExcludeChange: (on) => { if (on) { run.queue = run.queue.filter((x) => x !== id); renderRunSideInto(); } },
+    });
+    run.card = card;
+    keyTarget = card;
+    const wrap = el("section", { class: "panel card", id: "run-card" }, [card.el]);
+    if (isMock) wrap.append(el("div", { class: "submit-row" }, [el("span", { class: "kbd-hint", text: "答えると次の問題へ進みます" })]));
+    else wrap.append(el("div", { class: "submit-row" }, [el("span", { class: "kbd-hint", text: "選択肢は数字キーでも選べます" })]));
+    return wrap;
   }
-  function submitRun(id, response) {
-    const { question } = drillInfo.get(id);
-    const isCorrect = isAnswerCorrect(question, response);
-    run.answers[id] = { response, isCorrect };
-    if (run.kind === "mock") { advanceRun(); return; }
-    // 学習履歴：最後の結果を残す。正解したら「あとで復習」も外す（復習リストから外れる）
-    const record = drillRecord(id) || { result: "new", flagged: false, attempts: 0 };
-    record.result = isCorrect ? "ok" : "ng";
-    record.attempts = (record.attempts || 0) + 1;
-    record.lastAnswered = today();
-    if (isCorrect) record.flagged = false;
-    progress.questions[id] = record;
-    countAnswer(isCorrect);
-    saveProgress();
-    render({ keepScroll: true });
-    const card = document.getElementById("run-card");
-    if (isCorrect) celebrateAt(card.querySelector(".result"));
-    else shake(card);
-  }
-  function advanceRun() {
-    const next = run.ids.findIndex((id) => !run.answers[id]);
-    if (next === -1) { finishRun(); return; }
-    run.shown = next;
-    render();
-  }
-  function renderRunSide() {
+  function renderRunSide() { return el("aside", { class: "side", id: "run-side" }, runSideChildren()); }
+  function renderRunSideInto() { const side = document.getElementById("run-side"); if (side) side.replaceChildren(...runSideChildren()); }
+  function runSideChildren() {
     const isMock = run.kind === "mock";
-    const answers = Object.values(run.answers);
-    const okCount = answers.filter((a) => a.isCorrect).length;
-    const grid = el("div", { class: "grid10" }, run.ids.map((id, i) => {
-      const answer = run.answers[id];
-      let cls = "";
-      if (!run.finished && i === run.shown) cls = "cur";
-      else if (answer) cls = isMock && !run.finished ? "done" : answer.isCorrect ? "ok" : "ng";
-      return el("button", {
-        class: cls, "aria-label": `問題${i + 1}`, text: String(i + 1),
-        onclick: () => { if ((answer && !isMock) || i === run.ids.findIndex((x) => !run.answers[x])) { run.shown = i; run.finished = false; render(); } },
-      });
-    }));
-    const legend = isMock && !run.finished
-      ? el("div", { class: "legend" }, [el("span", {}, [el("i", { style: "background:var(--line-strong)" }), "回答済み"]), el("span", {}, [el("i", { style: "border:2px solid var(--accent)" }), "表示中"])])
-      : el("div", { class: "legend" }, [
-        el("span", {}, [el("i", { style: "background:var(--ok-strong)" }), "正解"]),
-        el("span", {}, [el("i", { style: "background:var(--ng-strong)" }), "不正解"]),
-        el("span", {}, [el("i", { style: "border:2px solid var(--accent)" }), "表示中"]),
-        el("span", {}, [el("i", { style: "background:var(--surface-2)" }), "未解答"]),
-      ]);
-    const children = [el("section", { class: "panel" }, [
-      el("div", { class: "review-head" }, [el("h3", { style: "font-size:.9rem", text: "問題一覧" }), isMock && !run.finished ? null : el("span", { class: "muted num", style: "font-size:.8rem", text: `正解 ${okCount} ／ 解答 ${answers.length}` })]),
-      grid, legend,
+    const rows = run.log.map((entry, i) => el("div", {}, [el("span", { text: `${i + 1}. ${scopeLabel(entry.id)}${entry.retry ? "（もう一度）" : ""}` }), isMock && !run.finished ? el("span", { class: "muted", text: "回答済み" }) : el("span", { class: entry.correct ? "ok" : "ng", text: entry.correct ? "○" : "×" })]));
+    if (!run.finished && run.current) rows.push(el("div", { class: "cur" }, [el("span", { text: `${run.log.length + 1}. ${scopeLabel(run.current)}` }), el("span", { class: "muted", text: "解答中" })]));
+    return [el("section", { class: "panel" }, [
+      el("h3", { style: "font-size:.9rem", text: "この回の問題" }),
+      el("p", { class: "muted", style: "font-size:.8rem;margin:0", text: isMock ? "答えると次の問題へ進みます。" : `残り ${run.queue.length}問。間違えた問題は、少しあとにもう一度出ます。` }),
+      el("div", { class: "queue" }, rows),
     ])];
-    if (!isMock || run.finished) {
-      // 範囲ごとの正答：章末演習は節ごと、それ以外は章ごと
-      const groups = new Map();
-      for (const id of run.ids) {
-        const target = parseRef((drillInfo.get(id).question.refs || [])[0]);
-        if (!target) continue;
-        const key = run.kind === "chapter" ? target.section.id : chapterBySectionId.get(target.section.id).id;
-        const name = run.kind === "chapter" ? `${sectionCode(target.section)} ${target.section.title}` : chapterLabel(chapterBySectionId.get(target.section.id));
-        if (!groups.has(key)) groups.set(key, { name, total: 0, answered: 0, ok: 0 });
-        const group = groups.get(key);
-        group.total += 1;
-        if (run.answers[id]) { group.answered += 1; if (run.answers[id].isCorrect) group.ok += 1; }
-      }
-      children.push(el("section", { class: "panel" }, [
-        el("h3", { style: "font-size:.9rem", text: run.kind === "chapter" ? "節ごとの正答" : "章ごとの正答" }),
-        el("div", { class: "scope-scores" }, [...groups.values()].map((g) => el("div", {}, [
-          el("div", { class: "row" }, [el("span", { text: g.name }), el("span", { class: "num muted", text: g.answered ? `${g.ok} / ${g.answered}` : "未解答" })]),
-          el("div", { class: "meter ok" }, [el("span", { style: `width:${g.answered ? (g.ok / g.total) * 100 : 0}%` })]),
-        ]))),
-      ]));
-    }
-    return el("aside", { class: "side" }, children);
   }
   function renderRunResult() {
-    const results = run.ids.map((id) => ({ id, question: drillInfo.get(id).question, answer: run.answers[id] || { response: null, isCorrect: false } }));
-    const okCount = results.filter((r) => r.answer.isCorrect).length;
-    const wrong = results.filter((r) => !r.answer.isCorrect);
+    keyTarget = null;
     const isMock = run.kind === "mock";
-    const children = [el("div", { class: "eyebrow", text: `${run.label ? run.label + " " : ""}${run.title}の結果` })];
-    children.push(el("div", { class: "score num", style: "margin:10px 0" }, [String(okCount), el("small", { text: `/ ${results.length} 問 正解` })]));
+    const firstTries = run.log.filter((e) => !e.retry);
+    const okFirst = firstTries.filter((e) => e.correct).length;
+    const ids = [...new Set(run.log.map((e) => e.id))];
+    const closedNow = ids.filter((id) => recOf(id).closedOn === today()).length;
+    const children = [el("div", { class: "eyebrow", text: `${run.label} ${run.title}の結果` })];
+    children.push(el("div", { class: "score num", style: "margin:10px 0" }, [String(okFirst), el("small", { text: `/ ${firstTries.length} 問 正解（1回目）` })]));
     if (isMock) {
-      const rate = Math.round((okCount / results.length) * 100);
+      const rate = firstTries.length ? Math.round((okFirst / firstTries.length) * 100) : 0;
       const passing = content.meta.exam.passingRate;
       children.push(el("p", { style: "font-weight:700;font-size:1.1rem", text: passing ? `正答率 ${rate}%（合格ライン ${passing}%）… ${rate >= passing ? "合格" : "不合格"}` : `正答率 ${rate}%` }));
       children.push(el("p", { class: "muted", text: "模擬試験の結果は学習履歴に記録しません。" }));
       if (passing && rate >= passing && !run.celebrated) { run.celebrated = true; requestAnimationFrame(celebrateBig); }
     } else {
-      children.push(el("p", { class: "muted", text: wrong.length ? `間違えた ${wrong.length}問は復習リストに入りました。ホームからまとめて解き直せます。` : "全問正解です！" }));
-      if (!wrong.length && !run.celebrated) { run.celebrated = true; requestAnimationFrame(celebrateBig); }
+      children.push(el("p", { class: "muted", text: closedNow ? `この回で ${closedNow}問を「覚えた」にしました。` : "覚えていない問題は、日を変えてもう一度出します。" }));
+      if (okFirst === firstTries.length && !run.celebrated) { run.celebrated = true; requestAnimationFrame(celebrateBig); }
     }
     const buttons = [el("button", { class: "btn", text: "ホームへ", onclick: () => { run = null; showView("home"); } })];
-    if (run.kind === "chapter" || run.kind === "final") {
-      const pool = run.kind === "chapter" ? chapters.find((c) => c.id === run.chapterId).exercise : finalExam;
-      const remaining = pool.filter((q) => drillResult(q.id) !== "ok").length;
-      if (remaining) buttons.push(el("button", { class: "btn primary", text: `続けて解く（残り ${remaining}問）`, onclick: () => startRun(run.kind, run.chapterId) }));
-      if (run.kind === "chapter") {
-        const chapter = chapters.find((c) => c.id === run.chapterId);
-        const nextChapter = chapters[chapters.indexOf(chapter) + 1];
-        if (nextChapter) buttons.push(el("button", { class: remaining ? "btn" : "btn primary", text: `第${chapterNo(nextChapter)}章 ${nextChapter.title}へ ›`, onclick: () => { run = null; openSection(nextChapter.sections[0].id); } }));
-      }
+    if (run.kind === "chapter") {
+      const chapter = chapters.find((c) => c.id === run.chapterId);
+      const nextChapter = chapters[chapters.indexOf(chapter) + 1];
+      if (nextChapter) buttons.push(el("button", { class: "btn primary", text: `第${chapterNo(nextChapter)}章 ${nextChapter.title}へ ›`, onclick: () => { run = null; openSection(nextChapter.sections[0].id); } }));
     }
     children.push(el("div", { class: "btn-row", style: "justify-content:center;margin-top:16px" }, buttons));
-    for (const r of wrong) {
-      children.push(el("div", { class: "miss" }, [
-        el("div", { html: r.question.type === "truefalse" ? `「${r.question.prompt}」` : r.question.prompt }),
-        el("p", {}, [el("b", { text: "正解：" }), el("span", { class: "answer-text", style: "white-space:pre-line", text: correctAnswerText(r.question, run.views[r.id]) })]),
-        el("p", { class: "muted", html: r.question.explanation }),
-        ...(r.question.refs || []).filter((ref) => parseRef(ref)).slice(0, 1).map((ref) => el("button", { class: "link-btn", style: "font-size:.85rem", text: `📖 ${refLabel(ref)}`, onclick: () => { const target = parseRef(ref); run = null; openSection(target.section.id, { itemId: target.item ? target.item.id : null }); } })),
-      ]));
+    if (isMock) {
+      for (const entry of run.log.filter((e) => !e.correct)) {
+        const q = questionById.get(entry.id);
+        children.push(el("div", { class: "miss" }, [
+          el("div", { html: q.type === "truefalse" ? `「${q.prompt}」` : q.prompt }),
+          el("p", {}, [el("b", { text: "正解：" }), el("span", { style: "white-space:pre-line", text: correctAnswerText(q, null) })]),
+          el("p", { class: "muted", html: q.explanation }),
+        ]));
+      }
     }
     return el("section", { class: "panel card done-card" }, children);
   }
 
-  // ===== 設定（学習履歴） =====
+  // ===== 設定（学習履歴・出さない問題） =====
   function renderSettings() {
     const resetButton = el("button", { class: "btn danger", text: "学習履歴を消す" });
     resetButton.addEventListener("click", () => {
-      if (resetButton.dataset.armed) {
-        progress = createEmptyProgress();
-        saveProgress();
-        run = null;
-        showToast("学習履歴を消しました。");
-        render();
-      } else {
-        resetButton.dataset.armed = "1";
-        resetButton.textContent = "もう一度押すと消えます";
-      }
+      if (resetButton.dataset.armed) { progress = createEmptyProgress(); saveProgress(); run = null; showToast("学習履歴を消しました。"); render(); }
+      else { resetButton.dataset.armed = "1"; resetButton.textContent = "もう一度押すと消えます"; }
     });
+    const excluded = allIds.filter((id) => !isActive(id));
     app.append(el("div", { class: "settings" }, [
       el("h1", { text: "⚙ 設定" }),
       el("section", { class: "panel" }, [
+        el("h3", { style: "margin:0 0 6px", text: "出さない問題" }),
+        el("p", { class: "muted", style: "font-size:.88rem;margin:0", text: "「この問題はもう出さない」にした問題です。戻すと、また出題します。この一覧は、学習履歴の書き出しに含まれます（教材を直すときの材料になります）。" }),
+        excluded.length ? el("div", { class: "ex-list" }, excluded.map((id) => el("div", { class: "ex-row" }, [
+          el("span", {}, [el("small", { class: "muted", text: scopeLabel(id) + "　" }), stripTags(questionById.get(id).prompt)]),
+          el("button", { class: "btn small", text: "出題に戻す", onclick: () => { setExcluded(id, false); showToast("出題に戻しました。"); render(); } }),
+        ]))) : el("p", { class: "muted", style: "font-size:.88rem", text: "いまはありません。" }),
+      ]),
+      el("section", { class: "panel" }, [
         el("h3", { style: "margin:0 0 6px", text: "学習履歴" }),
-        el("p", { class: "muted", style: "font-size:.88rem;margin:0 0 14px", text: "学習履歴（すぐ確認の正解、演習の結果、復習リスト、メモ）はこのブラウザにだけ保存されます。ブラウザを変えるときやデータを消す前に、書き出して控えを取ってください。" }),
+        el("p", { class: "muted", style: "font-size:.88rem;margin:0 0 14px", text: "学習履歴（問題ごとの結果と次の出題日、出さない問題、メモ）はこのブラウザにだけ保存されます。ブラウザを変えるときやデータを消す前に、書き出して控えを取ってください。" }),
         el("div", { class: "btn-row" }, [
           el("button", { class: "btn", text: "書き出す", onclick: exportProgress }),
           el("button", { class: "btn", text: "読み込む", onclick: () => document.getElementById("import-file").click() }),
@@ -1591,7 +1652,8 @@ main { padding: 28px 20px 70px; }
     ]));
   }
   function exportProgress() {
-    const blob = new Blob([JSON.stringify(progress, null, 2)], { type: "application/json" });
+    const data = { ...progress, excludedQuestions: allIds.filter((id) => !isActive(id)).map((id) => ({ id, where: scopeLabel(id), prompt: stripTags(questionById.get(id).prompt) })) };
+    const blob = new Blob([JSON.stringify(data, null, 2)], { type: "application/json" });
     const link = el("a", { href: URL.createObjectURL(blob), download: `study-kit_${content.meta.id}_${today()}.json` });
     document.body.append(link);
     link.click();
@@ -1606,6 +1668,7 @@ main { padding: 28px 20px 70px; }
       const imported = JSON.parse(await file.text());
       if (imported.contentId !== content.meta.id) { showToast(`別の教材の履歴です（${imported.contentId}）。読み込みませんでした。`); return; }
       if (imported.version !== PROGRESS_VERSION) { showToast("古い形式の学習履歴のため読み込めませんでした。"); return; }
+      delete imported.excludedQuestions;
       progress = normalizeProgress(imported);
       saveProgress();
       run = null;
@@ -1620,6 +1683,7 @@ main { padding: 28px 20px 70px; }
   document.title = content.meta.title;
   document.getElementById("brand-title").textContent = content.meta.title;
   document.getElementById("brand-series").textContent = content.meta.series || "";
+  if (debugToday) document.getElementById("brand-series").textContent = `検証用の日付：${today()}`;
   render();
 })();
 </script>

@@ -251,6 +251,16 @@ def _check_question(question, where, ref_targets, report, is_check=False):
         report.warn(where, "unit（入力欄の後ろの単位）は fill の問題で、空でない文字列のときだけ使います")
     if question.get("hint") is not None and not _is_non_empty_string(question.get("hint")):
         report.error(where, "hint は空でない文字列にしてください")
+    notes = question.get("optionNotes")
+    if notes is not None:
+        if question_type not in ("choice", "predict"):
+            report.warn(where, "optionNotes は choice・predict の問題でだけ使います")
+        elif not isinstance(notes, list) or not isinstance(options, list) or len(notes) != len(options) \
+                or not all(n is None or _is_non_empty_string(n) for n in notes):
+            report.error(where, "optionNotes は options と同じ長さの配列にし、各要素は解説の文字列か null にしてください")
+    if question_type == "fill" and isinstance(answer, list) and answer \
+            and not any(isinstance(a, str) and re.fullmatch(r"[\x20-\x7e]+", a) for a in answer):
+        report.warn(where, "fill の answer に半角の英数字で打てる表記がありません（日本語でしか答えられない語は選択式にします）")
 
     refs = question.get("refs")
     if is_check:
