@@ -5,7 +5,7 @@
   - ID の重複
   - リンク切れ（refs が存在しない節・項目を指す、sources が存在しない事実IDを指す）
   - 正解の整合性（正解が選択肢にない、並べ替えの正解が項目の並べ替えになっていない）
-  - 分量の目安（1節の項目3〜6個、章末演習10問以上、総合演習は節の数×10問以上）
+  - 分量の目安（1節の項目3〜6個（重要度 A は8個まで）、重要度に応じたすぐ確認の数、章末演習10問以上、総合演習は節の数×10問以上）
   - 図解の使い忘れ（説明の項目ごとに図や表の部品を1つ以上）
   - 固有名詞の前提の説明（sk-premise）が、その語の初出より後ろに置かれていないか
   - 廃止した問題（retired）が教材に残っていないか、同じ問題文で作り直していないか
@@ -17,6 +17,7 @@
 
 import argparse
 import json
+import math
 import re
 import sys
 from pathlib import Path
@@ -43,10 +44,24 @@ CHAPTER_NUMBER_PATTERN = re.compile(r"^\s*(第\s*)?[0-9０-９]+\s*章")
 SECTION_NUMBER_PATTERN = re.compile(r"^\s*[0-9０-９]+\s*[.．\-－]\s*[0-9０-９]+")
 MIN_ITEMS_PER_SECTION = 3
 MAX_ITEMS_PER_SECTION = 6
+MAX_ITEMS_PER_SECTION_A = 8  # 重要度 A の盛りだくさんな節
 MIN_KEY_POINTS = 2
 MAX_KEY_POINTS = 6
 MIN_EXERCISE_PER_CHAPTER = 10
 FINAL_EXAM_QUESTIONS_PER_SECTION = 10
+MAX_CHECKS_PER_ITEM = 4
+# 節の重要度ごとの、1項目あたりのすぐ確認の数の下限（A：ゴールに直結する中心の節、B：標準、C：前提・補助）
+IMPORTANCE_QUESTIONS_PER_ITEM = {"A": 2, "B": 1.5, "C": 1}
+
+
+def item_checks(item):
+    """項目のすぐ確認の配列を返す。checks（配列）と、1問だけの旧形式 check の両方を読む。形が違えば None。"""
+    if "checks" in item:
+        return item["checks"] if isinstance(item["checks"], list) else None
+    check = item.get("check")
+    if check is None:
+        return []
+    return [check]
 
 
 class Report:
@@ -174,7 +189,8 @@ def _check_premises(chapters, final_exam, report):
                         continue
                     premises.append((term, where, len(texts), match.start()))
                 texts.append((where, _mask_tags(text)))
-                texts.append((f"{where} のすぐ確認", _question_text(item.get("check"))))
+                for check in item_checks(item) or []:
+                    texts.append((f"{where} のすぐ確認", _question_text(check)))
         for question in chapter.get("exercise", []) or []:
             texts.append((f"章 {chapter.get('id')} の章末演習", _question_text(question)))
     for question in final_exam:
@@ -283,8 +299,11 @@ def _iter_questions(chapters, final_exam):
             if not isinstance(section, dict):
                 continue
             for item in section.get("items", []) or []:
-                if isinstance(item, dict) and isinstance(item.get("check"), dict):
-                    yield item["check"], f"すぐ確認 {item['check'].get('id')}（{section.get('id')} {item.get('id')}）"
+                if not isinstance(item, dict):
+                    continue
+                for check in item_checks(item) or []:
+                    if isinstance(check, dict):
+                        yield check, f"すぐ確認 {check.get('id')}（{section.get('id')} {item.get('id')}）"
         for question in chapter.get("exercise", []) or []:
             if isinstance(question, dict):
                 yield question, f"章末演習 {question.get('id')}"
@@ -438,10 +457,12 @@ def validate(content):
             if not isinstance(items, list) or not items:
                 report.error(section_where, "items（本文の項目とすぐ確認）の配列が必要です")
                 continue
-            if not MIN_ITEMS_PER_SECTION <= len(items) <= MAX_ITEMS_PER_SECTION:
-                report.warn(section_where, f"項目が {len(items)}個です（目安は{MIN_ITEMS_PER_SECTION}〜{MAX_ITEMS_PER_SECTION}個。項目ごとにすぐ確認が1問付きます）")
+            max_items = MAX_ITEMS_PER_SECTION_A if section.get("importance") == "A" else MAX_ITEMS_PER_SECTION
+            if not MIN_ITEMS_PER_SECTION <= len(items) <= max_items:
+                report.warn(section_where, f"項目が {len(items)}個です（目安は{MIN_ITEMS_PER_SECTION}〜{max_items}個。重要度 A の節は{MAX_ITEMS_PER_SECTION_A}個まで）")
             item_ids = set()
             text_items = 0
+            section_questions = 0
             for item_index, item in enumerate(items):
                 item_where = f"{section_where} items[{item_index}]"
                 if not isinstance(item, dict):
@@ -466,17 +487,39 @@ def validate(content):
                         report.warn(item_where, "図や表の部品（sk-figure / sk-nest / sk-flow / sk-compare / sk-cells など）が1つもありません。説明の項目には図解を1つ以上入れます")
                 elif isinstance(item.get("body"), str) and "sk-steps" not in item["body"]:
                     report.warn(item_where, "例題の解き方は sk-steps（手順）で書きます")
-                check = item.get("check")
-                check_where = f"すぐ確認 {check.get('id') if isinstance(check, dict) else '?'}（{section.get('id')} {item.get('id')}）"
-                if check is None and f"{section.get('id')}#{item.get('id')}" in retired_items:
-                    continue  # 学習者が不要とした問題を削除した項目（説明だけのページ）
-                if not isinstance(check, dict):
-                    report.error(item_where, "check（すぐ確認の問題）が必要です")
+                if "check" in item and "checks" in item:
+                    report.error(item_where, "check と checks の両方があります（checks にまとめます）")
+                checks = item_checks(item)
+                if checks is None:
+                    report.error(item_where, "checks はすぐ確認の問題の配列にしてください")
                     continue
-                register_id(check.get("id"), check_where)
-                _check_question(check, check_where, ref_targets, report, is_check=True)
+                if not checks:
+                    if f"{section.get('id')}#{item.get('id')}" not in retired_items:
+                        report.error(item_where, "checks（すぐ確認の問題。1問以上）が必要です")
+                    continue  # 学習者が不要とした問題をすべて削除した項目は、説明だけのページ
+                if len(checks) > MAX_CHECKS_PER_ITEM:
+                    report.warn(item_where, f"すぐ確認が {len(checks)}問です（1項目{MAX_CHECKS_PER_ITEM}問まで。多いときは項目を分けます）")
+                section_questions += len(checks)
+                for check in checks:
+                    check_where = f"すぐ確認 {check.get('id') if isinstance(check, dict) else '?'}（{section.get('id')} {item.get('id')}）"
+                    if not isinstance(check, dict):
+                        report.error(check_where, "オブジェクトが必要です")
+                        continue
+                    register_id(check.get("id"), check_where)
+                    _check_question(check, check_where, ref_targets, report, is_check=True)
             if text_items == 0:
                 report.error(section_where, "説明の項目（type が text）が1つもありません")
+            # 重要度に応じた問題数（目的に近い節ほど問題を増やす）
+            importance = section.get("importance")
+            if importance is None:
+                report.warn(section_where, "importance（重要度 A／B／C）がありません。章立てで決めた重要度を入れます")
+            elif importance not in IMPORTANCE_QUESTIONS_PER_ITEM:
+                report.error(section_where, f"importance は {sorted(IMPORTANCE_QUESTIONS_PER_ITEM)} のいずれかにしてください")
+            else:
+                expected_questions = math.ceil(len(items) * IMPORTANCE_QUESTIONS_PER_ITEM[importance])
+                retired_here = sum(1 for entry in content.get("retired") or [] if isinstance(entry, dict) and str(entry.get("item", "")).startswith(f"{section.get('id')}#"))
+                if section_questions + retired_here < expected_questions:
+                    report.warn(section_where, f"重要度 {importance} の節なのに、すぐ確認が {section_questions}問です（項目 {len(items)}個 × {IMPORTANCE_QUESTIONS_PER_ITEM[importance]} = {expected_questions}問以上にします）")
 
         exercise = chapter.get("exercise")
         if not isinstance(exercise, list):

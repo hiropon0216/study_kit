@@ -3,7 +3,7 @@
 学習者が ⚙ 設定から書き出した学習履歴（JSON）を読み、出さない問題を教材JSONから消す。
 
   - 章末演習・総合演習の問題：配列から削除する
-  - すぐ確認の問題：項目の check を削除する（項目の説明は残し、問題のないページになる）
+  - すぐ確認の問題：項目の checks から削除する（項目の説明は残す。すべて消えたら問題のないページになる）
   - 削除した問題は、教材JSONの retired に記録する。作り直しで同じ問題を復活させないため
 
 使い方:
@@ -53,10 +53,16 @@ def retire(content, ids, today):
     for chapter_no, chapter in enumerate(content.get("chapters") or [], start=1):
         for section_no, section in enumerate(chapter.get("sections") or [], start=1):
             for item in section.get("items") or []:
-                check = item.get("check")
-                if isinstance(check, dict) and check.get("id") in targets:
-                    record(check, "check", f"{chapter_no}-{section_no} {section.get('title')} ›「{plain(item.get('title'))}」", f"{section.get('id')}#{item.get('id')}")
-                    del item["check"]
+                # すぐ確認は checks（配列）。1問だけの旧形式 check は checks に直してから消す
+                if "check" in item:
+                    item["checks"] = [item.pop("check")] if item.get("check") else []
+                kept_checks = []
+                for check in item.get("checks") or []:
+                    if isinstance(check, dict) and check.get("id") in targets:
+                        record(check, "check", f"{chapter_no}-{section_no} {section.get('title')} ›「{plain(item.get('title'))}」", f"{section.get('id')}#{item.get('id')}")
+                    else:
+                        kept_checks.append(check)
+                item["checks"] = kept_checks
         kept = []
         for question in chapter.get("exercise") or []:
             if question.get("id") in targets:
