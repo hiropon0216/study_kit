@@ -8,6 +8,7 @@
   - 分量の目安（1節の項目3〜6個、章末演習10問以上、総合演習は節の数×10問以上）
   - 図解の使い忘れ（説明の項目ごとに図や表の部品を1つ以上）
   - 固有名詞の前提の説明（sk-premise）が、その語の初出より後ろに置かれていないか
+  - 廃止した問題（retired）が教材に残っていないか、同じ問題文で作り直していないか
 
 使い方:
   python validate.py content.json
@@ -273,6 +274,56 @@ def _check_question(question, where, ref_targets, report, is_check=False):
                 report.error(where, f"refs のリンク切れ: '{ref}' という節・項目はありません")
 
 
+def _iter_questions(chapters, final_exam):
+    """教材のすべての問題を (問題, 場所) で返す。"""
+    for chapter in chapters:
+        if not isinstance(chapter, dict):
+            continue
+        for section in chapter.get("sections", []) or []:
+            if not isinstance(section, dict):
+                continue
+            for item in section.get("items", []) or []:
+                if isinstance(item, dict) and isinstance(item.get("check"), dict):
+                    yield item["check"], f"すぐ確認 {item['check'].get('id')}（{section.get('id')} {item.get('id')}）"
+        for question in chapter.get("exercise", []) or []:
+            if isinstance(question, dict):
+                yield question, f"章末演習 {question.get('id')}"
+    for question in final_exam:
+        if isinstance(question, dict):
+            yield question, f"総合演習 {question.get('id')}"
+
+
+def _check_retired(retired, chapters, final_exam, report):
+    """廃止した問題（retire_questions.py が記録する）が教材に残っていないか、同じ問題を作り直していないか。"""
+    if retired is None:
+        return
+    if not isinstance(retired, list):
+        report.error("retired", "廃止した問題の配列が必要です")
+        return
+    retired_ids = {}
+    retired_prompts = {}
+    for index, entry in enumerate(retired):
+        where = f"retired[{index}]"
+        if not isinstance(entry, dict):
+            report.error(where, "オブジェクトが必要です")
+            continue
+        _check_required_strings(entry, ["id", "prompt"], where, report)
+        retired_ids[entry.get("id")] = entry
+        if _is_non_empty_string(entry.get("prompt")):
+            retired_prompts[_normalize_prompt(entry["prompt"])] = entry
+    for question, where in _iter_questions(chapters, final_exam):
+        if question.get("id") in retired_ids:
+            report.error(where, "廃止した問題が残っています。すぐ確認なら新しいIDの問題に差し替え、演習なら削除してください")
+            continue
+        prompt = _normalize_prompt(TAG_PATTERN.sub("", str(question.get("prompt", ""))))
+        if prompt and prompt in retired_prompts:
+            report.warn(where, f"廃止した問題 {retired_prompts[prompt].get('id')} と同じ問題文です（学習者が不要とした問題を作り直していないか確認します）")
+
+
+def _normalize_prompt(text):
+    return re.sub(r"\s+", "", text)
+
+
 def validate(content):
     report = Report()
     if not isinstance(content, dict):
@@ -456,6 +507,7 @@ def validate(content):
         report.warn("finalExam", f"総合演習が {len(final_exam)}問です（節の数×{FINAL_EXAM_QUESTIONS_PER_SECTION} = {expected}問以上にします）")
 
     _check_premises(chapters, final_exam, report)
+    _check_retired(content.get("retired"), chapters, final_exam, report)
 
     used_fact_ids = {
         fact_id

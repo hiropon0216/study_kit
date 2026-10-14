@@ -1786,7 +1786,7 @@ main { padding: 28px 20px 70px; }
       el("h1", { text: "⚙ 設定" }),
       el("section", { class: "panel" }, [
         el("h3", { style: "margin:0 0 6px", text: "出さない問題" }),
-        el("p", { class: "muted", style: "font-size:.88rem;margin:0", text: "「この問題はもう出さない」にした問題です。戻すと、また出題します。この一覧は、学習履歴の書き出しに含まれます（教材を直すときの材料になります）。" }),
+        el("p", { class: "muted", style: "font-size:.88rem;margin:0", text: "「この問題はもう出さない」にした問題です。戻すと、また出題します。教材そのものから廃止するには、下の「書き出す」で学習履歴を書き出し、教材を作ったときと同じように Claude（study-kit）に渡してください。不要な問題を消し、すぐ確認は新しい問題に差し替えた教材を作り直します。" }),
         excluded.length ? el("div", { class: "ex-list" }, excluded.map((id) => el("div", { class: "ex-row" }, [
           el("span", {}, [el("small", { class: "muted", text: scopeLabel(id) + "　" }), stripTags(questionById.get(id).prompt)]),
           el("button", { class: "btn small", text: "出題に戻す", onclick: () => { setExcluded(id, false); showToast("出題に戻しました。"); render(); } }),

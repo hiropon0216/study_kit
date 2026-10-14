@@ -27,6 +27,7 @@ factsheet[]                ファクトシートの事実
 | `finalExam` | array | ○ | 総合演習の問題の配列（作らない場合は `[]`） |
 | `factsheet` | array | ○ | ファクトシートの事実の配列 |
 | `factCheckLog` | array | | 事実チェックの記録（`references/factsheet.md`） |
+| `retired` | array | | 廃止した問題の記録。`scripts/retire_questions.py` が書く（下の「retired[]」） |
 
 ## meta
 
@@ -130,3 +131,17 @@ factsheet[]                ファクトシートの事実
 | `url` | string | ○ | 出典URL |
 | `rank` | string | ○ | `S`／`A`／`B` |
 | `backedBy` | string[] | B のとき○ | 裏付けにした rank S の事実ID |
+
+## retired[]（廃止した問題）
+
+学習者が「この問題はもう出さない」にした問題を、教材から廃止した記録（SKILL.md「不要な問題を教材から廃止するとき」）。手で書かず、`scripts/retire_questions.py` に書かせる。消さない。
+
+| キー | 型 | 必須 | 内容 |
+|---|---|---|---|
+| `id` | string | ○ | 廃止した問題のID。教材のどの問題にも使い回さない |
+| `prompt` | string | ○ | 廃止した問題の問題文（タグを除いたもの） |
+| `kind` | string | | `check`（すぐ確認）／`exercise`（章末演習）／`final`（総合演習） |
+| `where` | string | | 教材のどこにあったか |
+| `retiredOn` | string | | 廃止した日（YYYY-MM-DD） |
+
+- `validate.py` は、`retired` のIDが教材に残っていればエラー、同じ問題文の問題があれば警告にする
