@@ -548,6 +548,8 @@ main { padding: 28px 20px 70px; }
       for (const item of section.items) {
         item.kind = item.type === "example" ? "example" : "text";
         item.no = item.kind === "text" ? ++textNo : null;
+        // 問題を廃止した項目は check を持たない（説明だけのページになる）
+        if (!item.check) { item.check = null; continue; }
         questionById.set(item.check.id, item.check);
         checkInfo.set(item.check.id, { section, item });
       }
@@ -736,7 +738,7 @@ main { padding: 28px 20px 70px; }
     return ids.slice().sort((a, b) => (recOf(a).due || "").localeCompare(recOf(b).due || "") || (recOf(b).lapses || 0) - (recOf(a).lapses || 0));
   }
   // 節の完了：その節のすぐ確認（出さない問題を除く）すべてに一度は正解した
-  const sectionChecks = (section) => section.items.map((item) => item.check.id).filter(isActive);
+  const sectionChecks = (section) => section.items.filter((item) => item.check).map((item) => item.check.id).filter(isActive);
   const isSectionDone = (section) => sectionChecks(section).every((id) => recOf(id).everCorrect);
   // 進捗＝覚えた（クローズした）問題 ÷ 出題する問題
   function progressPercent() {
@@ -1141,7 +1143,7 @@ main { padding: 28px 20px 70px; }
     lesson = {
       sectionId, page: 0, card: null,
       opening: { own: ownDue, other: otherDue },
-      masked: new Set(section.items.filter((item) => recOf(item.check.id).everCorrect).map((item) => item.id)),
+      masked: new Set(section.items.filter((item) => item.check && recOf(item.check.id).everCorrect).map((item) => item.id)),
       revealed: new Set(), retries: {}, retryAt: {}, wrong: {},
     };
     // 扉がなければ1つめの項目から。項目を指定されたら、そのページを開く
@@ -1177,7 +1179,7 @@ main { padding: 28px 20px 70px; }
   for (const section of orderedSections) {
     for (const item of section.items) {
       searchIndex.push({ section, item, label: `${sectionCode(section)} ${section.title} ›「${itemLabel(item)}」`, text: stripTags(`${item.title}\n${item.body}`) });
-      searchIndex.push({ section, item, label: `${sectionCode(section)} ${section.title} › すぐ確認`, text: stripTags(item.check.prompt) });
+      if (item.check) searchIndex.push({ section, item, label: `${sectionCode(section)} ${section.title} › すぐ確認`, text: stripTags(item.check.prompt) });
     }
     if (section.keyPoints) searchIndex.push({ section, item: null, label: `${sectionCode(section)} ${section.title} › この節の要点`, text: section.keyPoints.map(stripTags).join(" ／ ") });
   }
@@ -1248,7 +1250,7 @@ main { padding: 28px 20px 70px; }
     ]);
 
     const chapterCards = chapters.map((chapter) => {
-      const ids = [...chapter.sections.flatMap((s) => s.items.map((it) => it.check.id)), ...(chapter.exercise || []).map((q) => q.id)].filter(isActive);
+      const ids = [...chapter.sections.flatMap(sectionChecks), ...(chapter.exercise || []).map((q) => q.id)].filter(isActive);
       const closed = ids.filter((id) => recOf(id).status === "closed").length;
       const touched = ids.some((id) => recOf(id).status !== "new");
       const done = chapter.sections.every(isSectionDone);
@@ -1345,7 +1347,7 @@ main { padding: 28px 20px 70px; }
       ]),
       el("div", { class: "meta" }, [
         el("span", { text: `読了目安 ${readingMinutes(section)} 分` }),
-        el("span", { text: `問題 ${section.items.length} 問` }),
+        el("span", { text: `問題 ${section.items.filter((item) => item.check).length} 問` }),
       ]),
       el("span", { class: "gate-pill", id: "gate-pill" }),
     ]);
@@ -1444,8 +1446,12 @@ main { padding: 28px 20px 70px; }
     left.append(el("h2", { id: `head-${item.id}` }, [el("span", { class: "no", text: String(index + 1) }), isExample ? "例題" : item.title]));
     left.append(isExample ? el("div", { class: "example" }, [el("div", { class: "example-head" }, [el("b", { html: item.title })]), body]) : body);
 
-    right.append(pageHead("問題集", `問 ${index + 1} / ${section.items.length}`));
-    right.append(checkBox(section, item, index));
+    right.append(pageHead("問題集", item.check ? `問 ${index + 1} / ${section.items.length}` : "問題なし"));
+    if (item.check) right.append(checkBox(section, item, index));
+    else right.append(el("div", { class: "check compact" }, [
+      el("p", { class: "q-note", style: "margin:0", text: "この項目の問題は、不要として削除しました。読み終えたら次のページへ進んでください。" }),
+      el("div", { class: "acts" }, [el("button", { class: "btn go", type: "button", text: "次のページへ ›", onclick: () => turnPage(lesson.page + 1) })]),
+    ]));
     const pageIndex = lesson.page;
     for (const id of Object.keys(lesson.retryAt).filter((x) => lesson.retryAt[x] === pageIndex)) right.append(retryBox(section, id));
   }
@@ -1592,7 +1598,8 @@ main { padding: 28px 20px 70px; }
     document.getElementById("page-tabs").replaceChildren(el("span", { class: "lbl", text: "ページ" }), ...pages.map((p, i) => {
       let cls = "";
       let text = pageName(p);
-      if (p.kind === "item") {
+      if (p.kind === "item" && !p.item.check) text = String(p.index + 1);
+      else if (p.kind === "item") {
         const id = p.item.check.id;
         cls = recOf(id).everCorrect ? "ok" : againToday(id) ? "due" : "";
         text = recOf(id).everCorrect ? "✓" : againToday(id) ? "↻" : String(p.index + 1);
@@ -1616,6 +1623,7 @@ main { padding: 28px 20px 70px; }
     if (dots) {
       const offset = pages.findIndex((p) => p.kind === "item");
       dots.replaceChildren(...section.items.map((item, i) => {
+        if (!item.check) return el("i", { title: itemLabel(item), text: "−" });
         const id = item.check.id;
         const ok = recOf(id).everCorrect;
         return el("i", { class: ok ? "ok" : againToday(id) ? "due" : "", title: itemLabel(item), text: ok ? "✓" : againToday(id) ? "↻" : String(i + 1) });
@@ -1623,7 +1631,7 @@ main { padding: 28px 20px 70px; }
       document.getElementById("side-map").replaceChildren(...section.items.map((item, i) => el("button", { type: "button", onclick: () => turnPage(offset + i) }, [
         el("span", { class: "num", text: String(i + 1) }),
         el("span", { text: item.kind === "example" ? "例題" : item.title }),
-        stateTag(item.check.id),
+        item.check ? stateTag(item.check.id) : el("span", { class: "muted small", text: "問題なし" }),
       ])));
     }
   }
@@ -1786,7 +1794,7 @@ main { padding: 28px 20px 70px; }
       el("h1", { text: "⚙ 設定" }),
       el("section", { class: "panel" }, [
         el("h3", { style: "margin:0 0 6px", text: "出さない問題" }),
-        el("p", { class: "muted", style: "font-size:.88rem;margin:0", text: "「この問題はもう出さない」にした問題です。戻すと、また出題します。教材そのものから廃止するには、下の「書き出す」で学習履歴を書き出し、教材を作ったときと同じように Claude（study-kit）に渡してください。不要な問題を消し、すぐ確認は新しい問題に差し替えた教材を作り直します。" }),
+        el("p", { class: "muted", style: "font-size:.88rem;margin:0", text: "「この問題はもう出さない」にした問題です。戻すと、また出題します。教材そのものから削除するには、下の「書き出す」で学習履歴を書き出し、教材を作ったときと同じように Claude（study-kit）に渡してください。これらの問題を消した教材を作り直します。" }),
         excluded.length ? el("div", { class: "ex-list" }, excluded.map((id) => el("div", { class: "ex-row" }, [
           el("span", {}, [el("small", { class: "muted", text: scopeLabel(id) + "　" }), stripTags(questionById.get(id).prompt)]),
           el("button", { class: "btn small", text: "出題に戻す", onclick: () => { setExcluded(id, false); showToast("出題に戻しました。"); render(); } }),

@@ -313,11 +313,11 @@ def _check_retired(retired, chapters, final_exam, report):
             retired_prompts[_normalize_prompt(entry["prompt"])] = entry
     for question, where in _iter_questions(chapters, final_exam):
         if question.get("id") in retired_ids:
-            report.error(where, "廃止した問題が残っています。すぐ確認なら新しいIDの問題に差し替え、演習なら削除してください")
+            report.error(where, "削除した問題（retired）が残っています。教材から削除してください")
             continue
         prompt = _normalize_prompt(TAG_PATTERN.sub("", str(question.get("prompt", ""))))
         if prompt and prompt in retired_prompts:
-            report.warn(where, f"廃止した問題 {retired_prompts[prompt].get('id')} と同じ問題文です（学習者が不要とした問題を作り直していないか確認します）")
+            report.warn(where, f"削除した問題 {retired_prompts[prompt].get('id')} と同じ問題文です（学習者が不要とした問題を作り直していないか確認します）")
 
 
 def _normalize_prompt(text):
@@ -379,6 +379,8 @@ def validate(content):
         return chapter_by_section.get(str(ref).split("#")[0])
 
     seen_ids = {}
+    # 問題を削除した項目（retired の item に記録がある）は check がなくてよい
+    retired_items = {entry.get("item") for entry in content.get("retired") or [] if isinstance(entry, dict) and entry.get("item")}
 
     def register_id(identifier, where):
         if identifier in seen_ids:
@@ -466,6 +468,8 @@ def validate(content):
                     report.warn(item_where, "例題の解き方は sk-steps（手順）で書きます")
                 check = item.get("check")
                 check_where = f"すぐ確認 {check.get('id') if isinstance(check, dict) else '?'}（{section.get('id')} {item.get('id')}）"
+                if check is None and f"{section.get('id')}#{item.get('id')}" in retired_items:
+                    continue  # 学習者が不要とした問題を削除した項目（説明だけのページ）
                 if not isinstance(check, dict):
                     report.error(item_where, "check（すぐ確認の問題）が必要です")
                     continue

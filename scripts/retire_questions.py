@@ -1,15 +1,14 @@
-"""学習者が「この問題はもう出さない」にした問題を、教材から廃止する。
+"""学習者が「この問題はもう出さない」にした問題を、教材から削除する。
 
-学習者が ⚙ 設定から書き出した学習履歴（JSON）を読み、出さない問題を教材JSONから外す。
+学習者が ⚙ 設定から書き出した学習履歴（JSON）を読み、出さない問題を教材JSONから消す。
 
-  - 章末演習・総合演習の問題：教材JSONから削除する
-  - すぐ確認の問題：項目に1問ずつ必要なので削除しない。新しいIDの問題に差し替えるよう一覧に出す
-    （差し替えるまで validate.py がエラーにする）
-  - 廃止した問題は、教材JSONの retired に記録する。作り直しで同じ問題を復活させないため
+  - 章末演習・総合演習の問題：配列から削除する
+  - すぐ確認の問題：項目の check を削除する（項目の説明は残し、問題のないページになる）
+  - 削除した問題は、教材JSONの retired に記録する。作り直しで同じ問題を復活させないため
 
 使い方:
   python retire_questions.py content.json 学習履歴.json -o content.json
-  python retire_questions.py content.json 学習履歴.json            # 何を廃止するかを表示するだけ
+  python retire_questions.py content.json 学習履歴.json            # 何を削除するかを表示するだけ
 """
 
 import argparse
@@ -19,8 +18,6 @@ import re
 import sys
 from pathlib import Path
 
-MIN_EXERCISE_PER_CHAPTER = 10
-FINAL_EXAM_QUESTIONS_PER_SECTION = 10
 TAG_PATTERN = re.compile(r"<[^>]+>")
 
 
@@ -41,68 +38,45 @@ def excluded_ids(history):
 
 
 def retire(content, ids, today):
-    """教材JSONを書き換え、廃止の結果を返す。"""
+    """教材JSONから問題を削除し、削除した問題の一覧を返す。"""
     targets = set(ids)
     retired = content.setdefault("retired", [])
-    already = {entry.get("id") for entry in retired if isinstance(entry, dict)}
-    result = {"removed": [], "replace": [], "unknown": [], "already": []}
-    found = set()
+    removed = []
 
-    def record(question, kind, where):
-        found.add(question["id"])
-        if question["id"] in already:
-            result["already"].append(question["id"])
-            return
-        retired.append({"id": question["id"], "kind": kind, "where": where, "prompt": plain(question.get("prompt")), "retiredOn": today})
-        already.add(question["id"])
+    def record(question, kind, where, item_ref=None):
+        entry = {"id": question["id"], "kind": kind, "where": where, "prompt": plain(question.get("prompt")), "retiredOn": today}
+        if item_ref:
+            entry["item"] = item_ref
+        retired.append(entry)
+        removed.append(entry)
 
-    section_count = 0
     for chapter_no, chapter in enumerate(content.get("chapters") or [], start=1):
         for section_no, section in enumerate(chapter.get("sections") or [], start=1):
-            section_count += 1
             for item in section.get("items") or []:
-                check = item.get("check") or {}
-                if check.get("id") in targets:
-                    where = f"{chapter_no}-{section_no} {section.get('title')} ›「{plain(item.get('title'))}」のすぐ確認"
-                    record(check, "check", where)
-                    result["replace"].append({"id": check["id"], "where": where, "prompt": plain(check.get("prompt"))})
+                check = item.get("check")
+                if isinstance(check, dict) and check.get("id") in targets:
+                    record(check, "check", f"{chapter_no}-{section_no} {section.get('title')} ›「{plain(item.get('title'))}」", f"{section.get('id')}#{item.get('id')}")
+                    del item["check"]
         kept = []
         for question in chapter.get("exercise") or []:
             if question.get("id") in targets:
-                where = f"第{chapter_no}章 章末演習"
-                record(question, "exercise", where)
-                result["removed"].append({"id": question["id"], "where": where, "prompt": plain(question.get("prompt"))})
+                record(question, "exercise", f"第{chapter_no}章 章末演習")
             else:
                 kept.append(question)
         chapter["exercise"] = kept
-        if len(kept) < MIN_EXERCISE_PER_CHAPTER:
-            result.setdefault("short", []).append(f"第{chapter_no}章 章末演習が {len(kept)}問です（あと {MIN_EXERCISE_PER_CHAPTER - len(kept)}問足します）")
 
     kept = []
     for question in content.get("finalExam") or []:
         if question.get("id") in targets:
             record(question, "final", "総合演習")
-            result["removed"].append({"id": question["id"], "where": "総合演習", "prompt": plain(question.get("prompt"))})
         else:
             kept.append(question)
     content["finalExam"] = kept
-    expected = section_count * FINAL_EXAM_QUESTIONS_PER_SECTION
-    if len(kept) < expected:
-        result.setdefault("short", []).append(f"総合演習が {len(kept)}問です（あと {expected - len(kept)}問足します）")
-
-    # 前に廃止して、もう教材にない問題は「記録済み」。廃止の記録にもない問題は、作り直しで消えた問題
-    for qid in ids:
-        if qid in found:
-            continue
-        if qid in already:
-            result["already"].append(qid)
-        else:
-            result["unknown"].append(qid)
-    return result
+    return removed
 
 
 def main():
-    parser = argparse.ArgumentParser(description="出さない問題を教材から廃止する")
+    parser = argparse.ArgumentParser(description="出さない問題を教材から削除する")
     parser.add_argument("content", type=Path, help="教材JSONのパス")
     parser.add_argument("history", type=Path, help="⚙ 設定から書き出した学習履歴（JSON）")
     parser.add_argument("-o", "--output", type=Path, help="書き換えた教材JSONの出力先（省略すると表示だけ）")
@@ -120,24 +94,13 @@ def main():
         return 1
 
     ids = excluded_ids(history)
-    if not ids:
-        print("出さない問題はありません。")
+    removed = retire(content, ids, datetime.date.today().isoformat())
+    if not removed:
+        print("削除する問題はありません（出さない問題がないか、すでに削除済みです）。")
         return 0
-    result = retire(content, ids, datetime.date.today().isoformat())
-
-    print(f"出さない問題 {len(ids)}問")
-    for entry in result["removed"]:
-        print(f"  削除   {entry['id']}（{entry['where']}）{entry['prompt']}")
-    for entry in result["replace"]:
-        print(f"  差し替え {entry['id']}（{entry['where']}）{entry['prompt']}")
-    for qid in result["already"]:
-        print(f"  記録済み {qid}（前に廃止済み）")
-    for qid in result["unknown"]:
-        print(f"  [WARN] {qid} は教材にありません（作り直しで消えた問題）")
-    for line in result.get("short", []):
-        print(f"  [補充] {line}")
-    if result["replace"]:
-        print("すぐ確認は新しいIDの問題に差し替えてください（差し替えるまで validate.py がエラーにします）。")
+    print(f"削除する問題 {len(removed)}問")
+    for entry in removed:
+        print(f"  {entry['id']}（{entry['where']}）{entry['prompt']}")
 
     if args.output:
         args.output.write_text(json.dumps(content, ensure_ascii=False, indent=2) + "\n", encoding="utf-8")

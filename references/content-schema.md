@@ -27,7 +27,7 @@ factsheet[]                ファクトシートの事実
 | `finalExam` | array | ○ | 総合演習の問題の配列（作らない場合は `[]`） |
 | `factsheet` | array | ○ | ファクトシートの事実の配列 |
 | `factCheckLog` | array | | 事実チェックの記録（`references/factsheet.md`） |
-| `retired` | array | | 廃止した問題の記録。`scripts/retire_questions.py` が書く（下の「retired[]」） |
+| `retired` | array | | 削除した問題の記録。`scripts/retire_questions.py` が書く（下の「retired[]」） |
 
 ## meta
 
@@ -72,7 +72,7 @@ factsheet[]                ファクトシートの事実
 | `type` | string | | `text`（説明。省略時）／`example`（例題） |
 | `title` | string | ○ | `text`：項目の見出し（「1. 」の番号は学習エンジンが付ける）。`example`：例題の問題文 |
 | `body` | string | ○ | `text`：説明の本文。`example`：例題の解き方（`sk-steps` で書く）。HTML 断片（下の「本文の書き方」） |
-| `check` | object | ○ | すぐ確認の問題（下の「問題」）。`refs` は不要（置かれた項目が教科書の該当箇所になる） |
+| `check` | object | ○ | すぐ確認の問題（下の「問題」）。`refs` は不要（置かれた項目が教科書の該当箇所になる）。学習者が不要とした問題を削除した項目だけ、ない（`retired` の `item` に記録がある） |
 
 - 1節は `text` の項目2〜5個と、必要なら最後に `example` を1個。例題の後ろのすぐ確認は「類題」として出る
 - 1つの項目で説明するのは1つの事柄にする。すぐ確認が「その項目を読めば解ける1問」になるように区切る
@@ -132,16 +132,17 @@ factsheet[]                ファクトシートの事実
 | `rank` | string | ○ | `S`／`A`／`B` |
 | `backedBy` | string[] | B のとき○ | 裏付けにした rank S の事実ID |
 
-## retired[]（廃止した問題）
+## retired[]（削除した問題）
 
-学習者が「この問題はもう出さない」にした問題を、教材から廃止した記録（SKILL.md「不要な問題を教材から廃止するとき」）。手で書かず、`scripts/retire_questions.py` に書かせる。消さない。
+学習者が「この問題はもう出さない」にした問題を、教材から削除した記録（SKILL.md「不要な問題を教材から削除するとき」）。手で書かず、`scripts/retire_questions.py` に書かせる。消さない。
 
 | キー | 型 | 必須 | 内容 |
 |---|---|---|---|
-| `id` | string | ○ | 廃止した問題のID。教材のどの問題にも使い回さない |
-| `prompt` | string | ○ | 廃止した問題の問題文（タグを除いたもの） |
+| `id` | string | ○ | 削除した問題のID。教材のどの問題にも使い回さない |
+| `prompt` | string | ○ | 削除した問題の問題文（タグを除いたもの） |
 | `kind` | string | | `check`（すぐ確認）／`exercise`（章末演習）／`final`（総合演習） |
+| `item` | string | check のとき | 問題を削除した項目（`節ID#項目ID`）。この項目は `check` がなくてよい |
 | `where` | string | | 教材のどこにあったか |
-| `retiredOn` | string | | 廃止した日（YYYY-MM-DD） |
+| `retiredOn` | string | | 削除した日（YYYY-MM-DD） |
 
 - `validate.py` は、`retired` のIDが教材に残っていればエラー、同じ問題文の問題があれば警告にする

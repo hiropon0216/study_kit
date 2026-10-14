@@ -94,7 +94,8 @@ def iter_questions(content):
     for chapter in content["chapters"]:
         for section in chapter["sections"]:
             for item in section["items"]:
-                yield item["check"]
+                if item.get("check"):  # 問題を削除した項目は check を持たない
+                    yield item["check"]
         yield from chapter.get("exercise", [])
     yield from content.get("finalExam", [])
 
