@@ -5,31 +5,36 @@
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Study Kit</title>
 <style>
-/* ===== テーマ（ダーク基調。references/learning-engine.md「画面」） ===== */
+/* ===== テーマ（案C アーケード：明るい地に、太い黒枠とずらした影のカード） ===== */
 :root {
-  color-scheme: dark;
-  --bg: #0e1116;
-  --surface: #161a21;
-  --surface-2: #1d222b;
-  --line: #2a303b;
-  --line-strong: #3a4250;
-  --text: #e7eaf0;
-  --muted: #98a1b0;
-  --accent: #7b94ff;
-  --accent-strong: #4e6ef2;
-  --accent-soft: rgba(123, 148, 255, 0.14);
-  --ok: #3cc28d;
-  --ok-strong: #1f9e6c;
-  --ok-soft: rgba(60, 194, 141, 0.14);
-  --ng: #f0894f;
-  --ng-strong: #c9612a;
-  --ng-soft: rgba(240, 137, 79, 0.14);
-  --mark: #f2c94c;
-  --mark-soft: rgba(242, 201, 76, 0.22);
-  --mark-ink: #1b1606;
-  --info: #6aa8ff;
-  --info-soft: rgba(106, 168, 255, 0.09);
-  --pre-bg: #0a0c10;
+  color-scheme: light;
+  --bg: #eef2f8;
+  --surface: #ffffff;
+  --surface-2: #f4f6fb;
+  --ink: #1d1f2e;            /* 枠線・影・文字 */
+  --text: #1d1f2e;
+  --muted: #5b6275;
+  --faint: #8a90a0;
+  --line: #d5dae6;
+  --primary: #6b4ef6;        /* 主なボタン（紫） */
+  --primary-dark: #4f35d6;
+  --primary-soft: #ece8ff;
+  --accent: #ff6a2c;         /* 進むボタン・番号（橙） */
+  --accent-soft: #ffe1d3;
+  --yellow: #ffd84d;         /* 今日の想起・今日出す */
+  --yellow-soft: #fff4c2;
+  --green: #22b35e;          /* 正解・覚えた */
+  --green-soft: #d5f3df;
+  --red: #ef4d4d;            /* 不正解 */
+  --red-soft: #ffdede;
+  --blue: #3a6fe0;           /* 次の出題日 */
+  --blue-soft: #c9dcff;
+  --lavender: #f0ecff;
+  --code-bg: #f1f3f8;
+  --pre-bg: #1e2030;
+  --shadow: 4px 4px 0 var(--ink);
+  --shadow-sm: 3px 3px 0 var(--ink);
+  --radius: 16px;
   --font: "BIZ UDPGothic", "Hiragino Sans", "Noto Sans JP", "Yu Gothic UI", Meiryo, system-ui, sans-serif;
   --mono: ui-monospace, "Cascadia Code", Consolas, "Courier New", monospace;
 }
@@ -38,436 +43,414 @@ html { -webkit-text-size-adjust: 100%; }
 body { margin: 0; background: var(--bg); color: var(--text); font-family: var(--font); font-size: 15px; line-height: 1.8; }
 button, input, textarea { font: inherit; color: inherit; }
 button { cursor: pointer; }
-button:disabled { cursor: not-allowed; }
-button:focus-visible, input:focus-visible, textarea:focus-visible, a:focus-visible, summary:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
-a { color: var(--accent); }
+button:disabled { cursor: default; }
+button:focus-visible, input:focus-visible, textarea:focus-visible, a:focus-visible, summary:focus-visible { outline: 3px solid var(--primary); outline-offset: 2px; }
+a { color: var(--primary); }
 h1, h2, h3, h4 { text-wrap: balance; }
-code, pre { font-family: var(--mono); font-size: 0.92em; }
-:not(pre) > code { background: var(--surface-2); border: 1px solid var(--line); padding: 0.05em 0.4em; border-radius: 5px; }
-pre { background: var(--pre-bg); border: 1px solid var(--line); color: var(--text); padding: 12px 14px; border-radius: 10px; overflow-x: auto; line-height: 1.55; margin: 0.9em 0; }
+code, pre { font-family: var(--mono); font-size: 0.9em; }
+:not(pre) > code { background: var(--code-bg); border: 1px solid var(--ink); padding: 0.02em 0.45em; border-radius: 6px; }
+pre { background: var(--pre-bg); color: #e8eaf3; padding: 12px 16px; border-radius: 12px; border: 2px solid var(--ink); overflow-x: auto; line-height: 1.6; margin: 0.9em 0; }
 .muted { color: var(--muted); }
+.small { font-size: 0.85rem; }
 .num { font-variant-numeric: tabular-nums; }
 [hidden] { display: none !important; }
 
 /* ===== 共通部品 ===== */
-.panel { background: var(--surface); border: 1px solid var(--line); border-radius: 14px; padding: 18px 20px; min-width: 0; }
-.btn { display: inline-flex; align-items: center; justify-content: center; gap: 6px; border: 1px solid var(--line-strong); background: var(--surface); border-radius: 8px; padding: 8px 16px; font-weight: 700; font-size: 0.9rem; line-height: 1.5; text-decoration: none; color: var(--text); }
-.btn:hover:not(:disabled) { border-color: var(--accent); }
-.btn.primary { background: var(--accent-strong); border-color: var(--accent-strong); color: #fff; }
-.btn.primary:hover:not(:disabled) { background: #5d7cff; }
-.btn.danger { color: var(--ng); border-color: var(--ng); }
-.btn:disabled { opacity: 0.45; }
-.btn.block { width: 100%; padding: 11px 16px; }
-.btn.small { padding: 4px 12px; font-size: 0.8rem; }
+.panel { background: var(--surface); border: 2px solid var(--ink); border-radius: var(--radius); box-shadow: var(--shadow); padding: 18px 20px; min-width: 0; }
+.btn { display: inline-flex; align-items: center; justify-content: center; gap: 8px; border: 2px solid var(--ink); background: var(--surface); border-radius: 12px; padding: 7px 16px; font-weight: 700; font-size: 0.9rem; line-height: 1.5; color: var(--text); box-shadow: var(--shadow-sm); transition: transform 0.06s, box-shadow 0.06s; text-decoration: none; }
+.btn:hover:not(:disabled) { transform: translate(-1px, -1px); box-shadow: 4px 4px 0 var(--ink); }
+.btn:active:not(:disabled) { transform: translate(2px, 2px); box-shadow: 1px 1px 0 var(--ink); }
+.btn.primary { background: var(--primary); color: #fff; }
+.btn.go { background: var(--accent); color: #fff; }
+.btn.danger { color: var(--red); }
+.btn:disabled { background: #e3e6ee; color: var(--faint); border-color: var(--faint); box-shadow: 3px 3px 0 var(--faint); }
+.btn.block { width: 100%; padding: 10px 16px; }
+.btn.small { padding: 3px 12px; font-size: 0.8rem; }
+.btn kbd { font-family: var(--mono); font-size: 0.72rem; border: 1.5px solid currentColor; border-radius: 5px; padding: 0 5px; line-height: 1.4; }
 .btn-row { display: flex; gap: 10px; flex-wrap: wrap; align-items: center; }
-.tag { display: inline-block; font-size: 0.72rem; font-weight: 700; padding: 1px 9px; border-radius: 99px; background: var(--surface-2); color: var(--muted); white-space: nowrap; }
-.tag.ok { background: var(--ok-soft); color: var(--ok); }
-.tag.ng { background: var(--ng-soft); color: var(--ng); }
-.tag.now { background: var(--accent-soft); color: var(--accent); }
-.meter { height: 6px; border-radius: 99px; background: var(--line); overflow: hidden; }
-.meter > span { display: block; height: 100%; background: var(--accent-strong); border-radius: 99px; transition: width 0.5s ease; }
-.meter.ok > span { background: var(--ok-strong); }
-.eyebrow { font-size: 0.78rem; color: var(--muted); font-weight: 700; }
-.link-btn { background: none; border: none; padding: 0; color: var(--accent); text-decoration: underline; text-underline-offset: 3px; text-align: left; }
-.flash { animation: flash 1.8s ease-out; border-radius: 6px; }
-@keyframes flash { 0%, 35% { background: var(--mark-soft); } 100% { background: transparent; } }
+.pill { display: inline-block; font-size: 0.75rem; font-weight: 700; padding: 1px 10px; border-radius: 99px; border: 1.5px solid var(--ink); background: var(--surface); white-space: nowrap; }
+.tag { display: inline-block; font-size: 0.72rem; font-weight: 700; padding: 0 9px; border-radius: 99px; border: 1.5px solid var(--ink); background: #e3e6ee; color: var(--text); white-space: nowrap; }
+.tag.ok { background: var(--green-soft); }
+.tag.now { background: var(--blue-soft); }
+.meter { height: 10px; border-radius: 99px; background: #e3e6ee; border: 1.5px solid var(--ink); overflow: hidden; }
+.meter > span { display: block; height: 100%; background: var(--green); transition: width 0.5s ease; }
+.eyebrow { display: inline-block; font-size: 0.75rem; font-weight: 700; padding: 1px 10px; border-radius: 99px; border: 1.5px solid var(--ink); background: var(--surface); }
+.link-btn { background: none; border: none; padding: 0; color: var(--primary); text-decoration: underline; text-underline-offset: 3px; text-align: left; font-weight: 700; }
+.flash { animation: flash 1.8s ease-out; border-radius: 8px; }
+@keyframes flash { 0%, 35% { background: var(--yellow-soft); } 100% { background: transparent; } }
 .shake { animation: shake 0.4s; }
 @keyframes shake { 0%, 100% { transform: translateX(0); } 25% { transform: translateX(-6px); } 50% { transform: translateX(6px); } 75% { transform: translateX(-3px); } }
 @keyframes pop { from { transform: scale(0.97); opacity: 0; } to { transform: none; opacity: 1; } }
+.kbd-hint { font-size: 0.75rem; color: var(--muted); }
 
 /* ===== 上部バー ===== */
-.appbar { position: sticky; top: 0; z-index: 30; display: flex; align-items: center; gap: 16px; padding: 10px 20px; background: rgba(14, 17, 22, 0.94); backdrop-filter: blur(8px); border-bottom: 1px solid var(--line); }
-.brand { display: flex; align-items: center; gap: 10px; min-width: 0; background: none; border: none; padding: 0; text-align: left; }
-.brand-icon { width: 32px; height: 32px; border-radius: 8px; background: var(--accent-strong); display: grid; place-items: center; flex: none; }
+.appbar { position: sticky; top: 0; z-index: 30; display: flex; align-items: center; gap: 16px; padding: 10px 20px; background: var(--surface); border-bottom: 2px solid var(--ink); }
+.brand { display: flex; align-items: center; gap: 10px; min-width: 0; background: none; border: none; padding: 0; text-align: left; margin-right: auto; }
+.brand-icon { display: none; }
 .brand-name { line-height: 1.25; min-width: 0; }
-.brand-name small { display: block; font-size: 0.7rem; color: var(--muted); }
-.brand-name strong { display: block; font-size: 0.95rem; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 32vw; }
+.brand-name small { display: block; font-size: 0.72rem; color: var(--muted); }
+.brand-name strong { display: block; font-size: 1.05rem; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 40vw; }
 .search { position: relative; flex: 0 1 380px; min-width: 0; }
-.search-box { display: flex; align-items: center; gap: 8px; background: var(--surface); border: 1px solid var(--line); border-radius: 8px; padding: 6px 12px; }
+.search-box { display: flex; align-items: center; gap: 8px; background: var(--surface); border: 2px solid var(--ink); border-radius: 99px; padding: 5px 14px; }
 .search-box input { background: none; border: none; outline: none; width: 100%; font-size: 0.88rem; }
-.search-box input::placeholder { color: var(--muted); }
-.search-results { position: absolute; top: calc(100% + 6px); left: 0; right: 0; min-width: min(420px, 90vw); background: var(--surface); border: 1px solid var(--line-strong); border-radius: 10px; box-shadow: 0 12px 30px rgba(0, 0, 0, 0.45); padding: 6px; max-height: 60vh; overflow-y: auto; z-index: 40; }
+.search-box input::placeholder { color: var(--faint); }
+.search-results { position: absolute; top: calc(100% + 8px); left: 0; right: 0; min-width: min(420px, 90vw); background: var(--surface); border: 2px solid var(--ink); border-radius: 12px; box-shadow: var(--shadow); padding: 6px; max-height: 60vh; overflow-y: auto; z-index: 40; }
 .search-results button { display: block; width: 100%; text-align: left; background: none; border: none; border-radius: 8px; padding: 8px 10px; }
 .search-results button:hover, .search-results button:focus-visible { background: var(--surface-2); }
 .search-results small { display: block; color: var(--muted); font-size: 0.72rem; }
 .search-results span { display: block; font-size: 0.85rem; line-height: 1.5; }
-.search-results mark { background: var(--mark-soft); color: var(--text); border-radius: 3px; }
+.search-results mark { background: var(--yellow); color: var(--ink); border-radius: 3px; }
 .search-results .empty { padding: 8px 10px; color: var(--muted); font-size: 0.85rem; }
-.appbar .spacer { flex: 1; }
-.hdr-progress { display: flex; align-items: center; gap: 10px; font-size: 0.8rem; color: var(--muted); white-space: nowrap; }
-.hdr-progress .meter { width: 110px; }
-.hdr-progress b { color: var(--text); }
-.gear { width: 36px; height: 36px; border-radius: 50%; border: 1px solid var(--line); background: var(--surface-2); display: grid; place-items: center; flex: none; font-size: 1rem; }
-.gear[aria-current="page"] { border-color: var(--accent); color: var(--accent); }
+.appbar .spacer { display: none; }
+.hdr-progress { display: flex; align-items: center; gap: 8px; font-size: 0.8rem; font-weight: 700; white-space: nowrap; }
+.hdr-progress .meter { width: 96px; }
+.gear { width: 38px; height: 38px; border-radius: 10px; border: 2px solid var(--ink); background: var(--surface); box-shadow: var(--shadow-sm); display: grid; place-items: center; flex: none; font-size: 1rem; }
+.gear[aria-current="page"] { background: var(--yellow); }
 
 main { padding: 28px 20px 70px; }
-.wrap { max-width: 1180px; margin: 0 auto; }
+.wrap { max-width: 1040px; margin: 0 auto; }
 
 /* ===== ホーム ===== */
-.home { display: grid; grid-template-columns: minmax(0, 1fr) 300px; gap: 24px; align-items: start; }
-.home-main, .home-side { display: grid; gap: 24px; min-width: 0; }
-.resume h2 { font-size: 1.75rem; margin: 2px 0 6px; line-height: 1.35; }
-.resume .meta, .article .meta { display: flex; gap: 6px 18px; flex-wrap: wrap; font-size: 0.85rem; color: var(--muted); }
-.resume .btn-row { margin-top: 16px; }
-.big-pct { font-size: 3rem; font-weight: 700; color: var(--accent); line-height: 1.1; margin: 6px 0 10px; }
-.big-pct small { font-size: 1rem; color: var(--text); margin-left: 4px; }
-.mini-stats { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-top: 16px; }
-.mini-stats div { background: var(--surface-2); border-radius: 8px; padding: 8px 12px; }
-.mini-stats span { display: block; font-size: 0.72rem; color: var(--muted); }
-.mini-stats b { font-size: 1.25rem; }
-.home h2.sec-title { font-size: 1.1rem; margin: 0 0 12px; }
-.cards { display: grid; grid-template-columns: repeat(auto-fill, minmax(220px, 1fr)); gap: 14px; }
-.chapter-card { display: grid; gap: 10px; text-align: left; background: var(--surface); border: 1px solid var(--line); border-radius: 12px; padding: 14px 16px; }
-.chapter-card:hover { border-color: var(--accent); }
+.home { display: grid; gap: 22px; }
+.home-row { display: grid; grid-template-columns: minmax(0, 2fr) minmax(0, 1fr); gap: 22px; }
+.today-card { background: var(--yellow); display: flex; justify-content: space-between; align-items: center; gap: 16px; flex-wrap: wrap; padding: 24px 28px; }
+.today-card h2 { margin: 12px 0 4px; font-size: 1.05rem; display: flex; align-items: baseline; gap: 8px; }
+.today-card h2 b { font-size: 4.2rem; line-height: 1; }
+.today-card p { margin: 0; font-size: 0.85rem; }
+.today-card .btn { font-size: 1.05rem; padding: 12px 28px; }
+.big-pct { font-size: 3rem; font-weight: 700; line-height: 1.1; margin: 10px 0 10px; }
+.big-pct small { font-size: 1rem; margin-left: 4px; }
+.split { display: flex; justify-content: space-between; gap: 10px; font-size: 0.8rem; font-weight: 700; margin-top: 8px; }
+.resume { display: flex; align-items: center; gap: 18px; flex-wrap: wrap; padding: 16px 22px; }
+.resume .where { min-width: 0; flex: 1; }
+.resume .where small { display: block; font-size: 0.78rem; color: var(--muted); }
+.resume .where b { font-size: 1.2rem; }
+.dots { display: flex; gap: 6px; align-items: center; }
+.dots i { width: 18px; height: 18px; border-radius: 50%; border: 2px solid var(--ink); background: var(--surface); }
+.dots i.on { background: var(--green); }
+.resume .info { font-size: 0.8rem; font-weight: 700; white-space: nowrap; }
+.sec-title { font-size: 1.15rem; margin: 6px 0 12px; }
+.cards { display: grid; grid-template-columns: repeat(auto-fill, minmax(260px, 1fr)); gap: 18px; }
+.chapter-card { display: grid; gap: 12px; text-align: left; background: var(--surface); border: 2px solid var(--ink); border-radius: var(--radius); box-shadow: var(--shadow); padding: 16px 18px; transition: transform 0.06s, box-shadow 0.06s; }
+.chapter-card:hover { transform: translate(-2px, -2px); box-shadow: 6px 6px 0 var(--ink); }
+.chapter-card.untouched { border-color: var(--muted); box-shadow: 4px 4px 0 var(--faint); }
 .chapter-card .row { display: flex; justify-content: space-between; align-items: center; gap: 8px; }
-.chapter-card .no { color: var(--accent); font-weight: 700; font-size: 0.8rem; }
+.chapter-card .no { width: 42px; height: 42px; display: grid; place-items: center; border: 2px solid var(--ink); border-radius: 10px; background: var(--blue-soft); font-weight: 700; font-size: 1.15rem; }
+.chapter-card.untouched .no { background: #e3e6ee; }
 .chapter-card h3 { font-size: 1.05rem; margin: 0; line-height: 1.4; }
-.chapter-card .foot { display: flex; justify-content: space-between; gap: 8px; font-size: 0.78rem; color: var(--muted); }
-.drill-card { display: flex; justify-content: space-between; align-items: center; gap: 12px; flex-wrap: wrap; }
-.drill-card h3 { margin: 0; font-size: 1rem; }
-.drill-card p { margin: 2px 0 0; font-size: 0.82rem; color: var(--muted); }
-.review-head { display: flex; justify-content: space-between; align-items: baseline; gap: 8px; }
-.review-head h3 { font-size: 1.05rem; margin: 0; }
-.review-list { display: grid; gap: 10px; margin: 12px 0 16px; }
-.review-item { border: 1px solid var(--line); border-radius: 8px; padding: 8px 12px; background: var(--surface-2); }
-.review-item .row { display: flex; justify-content: space-between; gap: 8px; font-size: 0.72rem; color: var(--muted); }
-.review-item p { margin: 2px 0 0; font-size: 0.88rem; line-height: 1.55; }
-.goal-list { margin: 8px 0 0; padding-left: 1.2em; font-size: 0.86rem; }
+.chapter-card .foot { display: flex; justify-content: space-between; gap: 8px; font-size: 0.78rem; font-weight: 700; }
+.home-bottom { display: grid; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); gap: 18px; }
+.drill-card { display: grid; gap: 10px; align-content: space-between; }
+.drill-card p { margin: 0; font-size: 0.9rem; }
+.drill-card .btn { justify-self: start; }
+.eyebrow.final { background: var(--accent-soft); }
+.eyebrow.mock { background: var(--lavender); }
+.eyebrow.goal { background: var(--green-soft); }
+.eyebrow.today { background: var(--surface); }
+.goal-list { margin: 10px 0 0; padding-left: 1.2em; font-size: 0.86rem; }
 
 /* ===== 節のページ ===== */
-.lesson { display: grid; grid-template-columns: 230px minmax(0, 1fr) 260px; gap: 24px; align-items: start; max-width: 1440px; margin: 0 auto; }
-.toc { position: sticky; top: 76px; max-height: calc(100vh - 96px); overflow-y: auto; font-size: 0.86rem; padding: 14px 10px; }
-.toc-head { display: flex; justify-content: space-between; align-items: center; padding: 0 8px 6px; }
+.lesson { display: grid; grid-template-columns: 210px minmax(0, 1fr) 250px; gap: 28px; align-items: start; max-width: 1360px; margin: 0 auto; }
+.toc { position: sticky; top: 84px; max-height: calc(100vh - 100px); overflow-y: auto; font-size: 0.84rem; }
+.toc-head { display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px; }
 .toc-head .btn { display: none; }
-.toc .ch { display: flex; justify-content: space-between; gap: 6px; padding: 10px 8px 2px; font-weight: 700; font-size: 0.82rem; }
-.toc .ch span { color: var(--muted); font-weight: 400; }
-.toc-link { display: flex; gap: 8px; align-items: center; width: 100%; padding: 5px 8px; border-radius: 6px; color: var(--text); background: none; border: none; text-align: left; line-height: 1.5; }
-.toc-link:hover { background: var(--surface-2); }
-.toc-link.current { background: var(--accent-soft); color: var(--accent); font-weight: 700; }
-.toc .st { width: 15px; height: 15px; border-radius: 50%; border: 1.5px solid var(--line-strong); flex: none; display: grid; place-items: center; font-size: 9px; }
-.toc .st.done { border-color: var(--ok); color: var(--ok); }
-.toc .st.cur { border-color: var(--accent); }
-.toc .st.cur::after { content: ""; width: 7px; height: 7px; border-radius: 50%; background: var(--accent); }
-.toc .st.drill { border-radius: 3px; border-color: var(--accent); color: var(--accent); }
-.toc hr { border: none; border-top: 1px solid var(--line); margin: 10px 4px; }
+.toc .ch { font-weight: 700; font-size: 0.82rem; margin: 14px 0 6px; }
+.toc .ch span { display: none; }
+.toc-link { display: flex; gap: 8px; align-items: flex-start; width: 100%; padding: 5px 8px; border-radius: 10px; color: var(--text); background: none; border: 2px solid transparent; text-align: left; line-height: 1.5; }
+.toc-link:hover { background: var(--surface); }
+.toc-link.current { background: var(--surface); border-color: var(--ink); box-shadow: var(--shadow-sm); font-weight: 700; }
+.toc .st { width: 17px; height: 17px; border-radius: 50%; border: 2px solid var(--ink); flex: none; display: grid; place-items: center; font-size: 9px; margin-top: 2px; background: var(--surface); }
+.toc .st.done { background: var(--green); color: #fff; }
+.toc .st.cur { background: linear-gradient(90deg, var(--yellow) 50%, var(--surface) 50%); }
+.toc .drill-link { display: inline-block; margin: 6px 0 2px 8px; font-size: 0.78rem; font-weight: 700; padding: 1px 10px; border-radius: 99px; border: 1.5px solid var(--ink); background: var(--accent-soft); }
+.toc .drill-link.final { background: var(--lavender); }
+.toc hr { display: none; }
 .toc-backdrop { display: none; }
 .toc-open-btn { display: none; }
-.lesson-top { display: flex; justify-content: space-between; align-items: center; gap: 10px; flex-wrap: wrap; margin-bottom: 14px; }
+.lesson-top { display: flex; justify-content: space-between; align-items: center; gap: 10px; flex-wrap: wrap; margin-bottom: 6px; }
 .crumbs { font-size: 0.8rem; color: var(--muted); display: flex; gap: 6px; flex-wrap: wrap; align-items: center; }
-.seg { display: inline-flex; background: var(--surface); border: 1px solid var(--line); border-radius: 10px; padding: 3px; }
-.seg button { border: none; background: none; border-radius: 7px; padding: 5px 14px; font-size: 0.82rem; font-weight: 700; color: var(--muted); }
-.seg button[aria-pressed="true"] { background: var(--surface-2); color: var(--accent); }
-.article { padding: 34px 44px 40px; }
-.sec-no { display: inline-block; background: var(--accent-soft); color: var(--accent); font-weight: 700; font-size: 0.8rem; padding: 0 10px; border-radius: 6px; }
-.article h1 { font-size: 2rem; margin: 6px 0 4px; line-height: 1.35; }
-.guide { display: flex; gap: 10px; align-items: center; background: var(--surface-2); border-radius: 8px; padding: 9px 14px; font-size: 0.85rem; color: var(--muted); margin: 18px 0 4px; }
-.guide b { color: var(--accent); }
-.block { scroll-margin-top: 80px; }
-.block > h2 { font-size: 1.3rem; margin: 30px 0 10px; padding-bottom: 6px; border-bottom: 1px solid var(--line-strong); scroll-margin-top: 80px; line-height: 1.45; }
-.example { border: 1px dashed var(--line-strong); border-radius: 10px; padding: 16px 20px; margin: 30px 0 0; scroll-margin-top: 80px; }
-.example-head { display: flex; align-items: baseline; gap: 12px; }
-.example-head .lbl { flex: none; background: var(--surface-2); color: var(--muted); font-size: 0.72rem; font-weight: 700; padding: 1px 8px; border-radius: 4px; }
-.example-head b { font-size: 1.02rem; }
-.sources { margin-top: 30px; font-size: 0.82rem; color: var(--muted); }
+.article { min-width: 0; }
+.sec-head { display: flex; align-items: center; gap: 12px; margin: 4px 0 8px; }
+.sec-no { display: grid; place-items: center; min-width: 46px; height: 40px; padding: 0 8px; border: 2px solid var(--ink); border-radius: 10px; background: var(--accent); color: #fff; font-weight: 700; box-shadow: var(--shadow-sm); }
+.article h1 { font-size: 1.8rem; margin: 0; line-height: 1.35; }
+.meta { display: flex; gap: 8px; flex-wrap: wrap; font-size: 0.78rem; }
+.meta span { padding: 0 10px; border-radius: 99px; border: 1.5px solid var(--ink); background: var(--surface); }
+.guide { display: none; }
+.block { scroll-margin-top: 90px; }
+.block > h2 { display: flex; align-items: center; gap: 12px; font-size: 1.25rem; margin: 40px 0 12px; scroll-margin-top: 90px; line-height: 1.4; }
+.block > h2 .no { flex: none; display: grid; place-items: center; width: 32px; height: 32px; border: 2px solid var(--ink); border-radius: 8px; background: var(--accent); color: #fff; font-size: 0.95rem; box-shadow: var(--shadow-sm); }
+.example { border: 2px solid var(--ink); border-radius: var(--radius); background: var(--surface); box-shadow: var(--shadow); padding: 22px 20px 14px; margin: 16px 0 0; position: relative; scroll-margin-top: 90px; }
+.example::before { content: "例題"; position: absolute; top: -13px; left: 16px; font-size: 0.75rem; font-weight: 700; padding: 1px 12px; border-radius: 99px; background: var(--ink); color: #fff; }
+.example-head b { font-size: 1rem; }
+.example-head .lbl { display: none; }
+.sources { margin-top: 30px; padding-top: 14px; border-top: 2px dashed var(--line); font-size: 0.85rem; }
 .sources summary { cursor: pointer; font-weight: 700; }
 .sources ul { padding-left: 0; list-style: none; }
 .sources li { margin: 6px 0; }
-.rank { display: inline-block; min-width: 1.7em; text-align: center; font-size: 0.75em; font-weight: 700; border-radius: 4px; margin-right: 6px; background: var(--accent-soft); color: var(--accent); }
-.pager { display: flex; justify-content: space-between; gap: 10px; flex-wrap: wrap; margin-top: 22px; border-radius: 10px; }
-.gate-text { text-align: right; font-size: 0.82rem; color: var(--muted); margin: 8px 0 0; }
-.gate-text b, .side-gate b { color: var(--ng); }
-.gate-text.open, .side-gate.open { color: var(--ok); font-weight: 700; }
-.lesson.only-quiz .explain, .lesson.only-quiz .guide { display: none; }
-.lesson.only-quiz .block > h2 { font-size: 1rem; margin-top: 22px; }
-.lesson.only-quiz .example { border: none; padding: 0; }
+.rank { display: inline-block; min-width: 1.7em; text-align: center; font-size: 0.75em; font-weight: 700; border-radius: 4px; margin-right: 6px; background: var(--primary-soft); color: var(--primary); }
+.pager { display: flex; justify-content: space-between; align-items: flex-start; gap: 10px; flex-wrap: wrap; margin-top: 24px; border-top: 2px dashed var(--line); padding-top: 18px; }
+.pager .btn { padding: 10px 18px; }
+.gate-text { text-align: right; font-size: 0.8rem; font-weight: 700; margin: 8px 0 0; }
+.gate-text b { background: var(--yellow); border: 1.5px solid var(--ink); border-radius: 6px; padding: 0 6px; }
+.gate-text.open { color: var(--green); }
 
-/* すぐ確認 */
-.check { margin: 22px 0 8px; border: 1px solid rgba(123, 148, 255, 0.35); background: rgba(123, 148, 255, 0.07); border-radius: 12px; padding: 14px 18px 16px; scroll-margin-top: 90px; }
-.check.is-ok { border-color: rgba(60, 194, 141, 0.55); }
-.check.is-ng { border-color: rgba(240, 137, 79, 0.55); }
-.check-head { display: flex; gap: 10px; align-items: center; flex-wrap: wrap; font-size: 0.78rem; color: var(--muted); }
-.check-badge { background: var(--accent-strong); color: #fff; font-weight: 700; padding: 1px 10px; border-radius: 6px; }
-.check-q { margin: 10px 0 0; }
-.hint { margin-top: 10px; font-size: 0.88rem; color: var(--muted); background: var(--surface-2); border-radius: 8px; padding: 8px 12px; }
+/* すぐ確認・問題のまとまり（左上にタブを付けたカード） */
+.check { margin: 30px 0 10px; border: 2px solid var(--ink); background: var(--surface); border-radius: var(--radius); box-shadow: var(--shadow); padding: 22px 18px 16px; position: relative; scroll-margin-top: 100px; }
+.check-head { position: absolute; top: -14px; left: 14px; display: flex; gap: 8px; align-items: center; }
+.check-badge { font-size: 0.75rem; font-weight: 700; padding: 1px 12px; border-radius: 99px; border: 2px solid var(--ink); background: var(--primary); color: #fff; white-space: nowrap; }
+.check-head .note { display: none; }
+.check.warmup { background: var(--yellow); padding: 20px 18px 18px; }
+.check.warmup .check-head { position: static; display: flex; flex-wrap: wrap; gap: 4px 12px; align-items: baseline; margin-bottom: 4px; }
+.check.warmup .check-badge { background: none; color: var(--ink); border: none; padding: 0; font-size: 0.95rem; }
+.check.warmup .check-head .note { display: inline; font-size: 0.78rem; }
+.check.retry { background: #fffbea; }
+.check.retry .check-badge { background: var(--yellow); color: var(--ink); }
+.subcard { background: var(--surface); border: 2px solid var(--ink); border-radius: 14px; box-shadow: var(--shadow-sm); padding: 20px 16px 14px; margin-top: 22px; position: relative; }
+.subcard .type-tab { position: absolute; top: -13px; left: 12px; font-size: 0.72rem; font-weight: 700; padding: 0 10px; border-radius: 99px; border: 2px solid var(--ink); background: var(--surface); }
 
-/* 解答の部品（すぐ確認と演習で共通） */
-.choices { display: grid; grid-template-columns: repeat(auto-fit, minmax(170px, 1fr)); gap: 10px; margin: 14px 0 0; }
-.choices.wide { grid-template-columns: 1fr; }
-.choice { display: flex; align-items: center; gap: 12px; text-align: left; border: 1px solid var(--line-strong); background: var(--surface); border-radius: 8px; padding: 9px 14px; min-width: 0; }
-.choice:hover:not(:disabled) { border-color: var(--accent); }
+/* ===== 問いのカード ===== */
+.qhead { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; justify-content: space-between; }
+.qhead-l { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; font-size: 0.78rem; color: var(--muted); }
+.qs { font-size: 0.72rem; font-weight: 700; padding: 0 9px; border-radius: 99px; border: 1.5px solid var(--ink); white-space: nowrap; color: var(--ink); }
+.qs.new { background: #e3e6ee; }
+.qs.due { background: var(--yellow); }
+.qs.wait { background: var(--blue-soft); }
+.qs.closed { background: var(--green-soft); }
+.qs.excluded { background: var(--surface); border-style: dashed; color: var(--muted); }
+.exclude-btn { background: var(--surface); border: 1.5px solid var(--line); border-radius: 99px; padding: 0 10px; font-size: 0.72rem; color: var(--muted); }
+.exclude-btn:hover { border-color: var(--red); color: var(--red); }
+.q-prompt { font-weight: 700; font-size: 1.02rem; margin: 10px 0 0; }
+.think { margin-top: 14px; border: 2px dashed var(--primary); background: var(--lavender); border-radius: 12px; padding: 10px 14px; }
+.think-label { font-size: 0.82rem; color: var(--primary-dark); font-weight: 700; }
+.think-bar { height: 10px; border-radius: 99px; background: var(--surface); border: 1.5px solid var(--ink); overflow: hidden; margin-top: 8px; }
+.think-bar span { display: block; height: 100%; width: 0; background: var(--primary); }
+.think-bar span.run { animation: think 3s linear forwards; }
+@keyframes think { to { width: 100%; } }
+.choices { display: grid; gap: 10px; margin-top: 14px; }
+.choices.grid2 { grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); }
+.choice { display: flex; align-items: center; gap: 12px; text-align: left; width: 100%; min-width: 0; border: 2px solid var(--ink); background: var(--surface); border-radius: 12px; padding: 9px 14px; box-shadow: var(--shadow-sm); font-weight: 700; transition: transform 0.06s, box-shadow 0.06s; }
+.choice:hover:not(:disabled) { transform: translate(-1px, -1px); box-shadow: 4px 4px 0 var(--ink); }
 .choice:disabled { cursor: default; }
-.choice .k { flex: none; width: 26px; height: 26px; border-radius: 50%; background: var(--surface-2); display: grid; place-items: center; font-size: 0.8rem; color: var(--muted); }
+.choice .k { flex: none; width: 26px; height: 26px; border-radius: 8px; border: 2px solid var(--ink); display: grid; place-items: center; font-size: 0.78rem; background: var(--surface); }
 .choice .t { flex: 1; min-width: 0; overflow-wrap: anywhere; }
-.run .choices { grid-template-columns: 1fr; }
-.choice[aria-pressed="true"] { border-color: var(--accent); background: var(--accent-soft); }
-.choice[aria-pressed="true"] .k { background: var(--accent-strong); color: #fff; }
-.choice.is-ok { border-color: var(--ok); background: var(--ok-soft); }
-.choice.is-ok .k { background: var(--ok-strong); color: #fff; }
-.choice.is-ng { border-color: var(--ng); background: var(--ng-soft); }
-.choice.is-ng .k { background: var(--ng-strong); color: #fff; }
-.choice.dim { opacity: 0.55; }
-.choice .note { margin-left: auto; font-size: 0.75rem; font-weight: 700; flex: none; }
-.choice.is-ok .note { color: var(--ok); }
-.choice.is-ng .note { color: var(--ng); }
-.ox { display: flex; gap: 12px; margin-top: 14px; }
-.ox button { width: 84px; height: 64px; border: 1px solid var(--line-strong); background: var(--surface); border-radius: 10px; font-size: 1.7rem; }
-.ox button:hover:not(:disabled) { border-color: var(--accent); }
-.ox button:disabled { cursor: default; }
-.ox button.is-ok { border-color: var(--ok); background: var(--ok-soft); color: var(--ok); }
-.ox button.is-ng { border-color: var(--ng); background: var(--ng-soft); color: var(--ng); }
-.ox button.dim { opacity: 0.55; }
+.choice .note { flex: none; font-size: 0.75rem; font-weight: 700; }
+.choice.is-ok { background: var(--green-soft); }
+.choice.is-ok .k { background: var(--green); color: #fff; }
+.choice.is-ng { background: var(--red-soft); }
+.choice.is-ng .k { background: var(--red); color: #fff; }
+.choice.dim { border-color: var(--faint); box-shadow: 3px 3px 0 var(--faint); color: var(--muted); }
+.ox { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; margin-top: 14px; }
+.ox button { height: 64px; border: 2px solid var(--ink); background: var(--surface); border-radius: 12px; box-shadow: var(--shadow-sm); font-size: 1.6rem; }
+.ox button:hover:not(:disabled) { transform: translate(-1px, -1px); box-shadow: 4px 4px 0 var(--ink); }
+.ox button.is-ok { background: var(--green-soft); }
+.ox button.is-ng { background: var(--red-soft); }
+.ox button.dim { border-color: var(--faint); box-shadow: 3px 3px 0 var(--faint); color: var(--faint); }
 .fillrow { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; margin-top: 14px; }
-.fillrow input { flex: 0 1 260px; min-width: 120px; background: var(--surface-2); border: 1px solid var(--line-strong); border-radius: 8px; padding: 8px 12px; font-size: 1.02rem; }
-.fillrow input::placeholder { color: var(--muted); }
-.fillrow input.is-ok { border-color: var(--ok); }
-.fillrow input.is-ng { border-color: var(--ng); }
+.fillrow input { flex: 0 1 260px; min-width: 120px; background: var(--surface); border: 2px solid var(--ink); border-radius: 10px; padding: 9px 14px; font-size: 1.05rem; font-family: var(--mono); box-shadow: inset 2px 2px 0 rgba(29, 31, 46, 0.08); }
+.fillrow input:focus { outline: none; border-color: var(--primary); box-shadow: 0 0 0 3px var(--primary-soft); }
+.fillrow input.is-ok { background: var(--green-soft); }
+.fillrow input.is-ng { background: var(--red-soft); }
 .order-list { list-style: none; padding: 0; margin: 14px 0 0; display: grid; gap: 8px; }
-.order-item { display: flex; align-items: center; gap: 10px; padding: 8px 12px; border: 1px solid var(--line-strong); border-radius: 8px; background: var(--surface); }
-.order-item .n { flex: none; width: 24px; height: 24px; border-radius: 50%; background: var(--accent-soft); color: var(--accent); display: grid; place-items: center; font-weight: 700; font-size: 0.8rem; }
+.order-item { display: flex; align-items: center; gap: 12px; padding: 7px 10px 7px 14px; border: 2px solid var(--ink); border-radius: 12px; background: var(--surface); }
+.order-item .n { flex: none; font-weight: 700; }
 .order-item .t { flex: 1; min-width: 0; overflow-wrap: anywhere; }
-.order-item .mv { display: flex; gap: 4px; }
-.order-item .mv button { width: 2.1em; height: 2.1em; border: 1px solid var(--line-strong); background: var(--surface-2); border-radius: 6px; }
+.order-item .mv { display: flex; gap: 6px; }
+.order-item .mv button { width: 34px; height: 34px; border: 2px solid var(--ink); background: var(--surface); border-radius: 8px; box-shadow: 2px 2px 0 var(--ink); }
 .order-item .mv button:disabled { opacity: 0.3; }
-.order-list.is-ok .order-item { border-color: var(--ok); }
-.order-list.is-ng .order-item { border-color: var(--ng); }
-.submit-row { display: flex; gap: 10px; flex-wrap: wrap; margin-top: 12px; }
-.result { margin-top: 14px; border-radius: 10px; padding: 12px 16px; animation: pop 0.25s ease-out; }
-.result.ok { background: var(--ok-soft); }
-.result.ng { background: var(--ng-soft); }
-.result .v { font-weight: 700; display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
-.result.ok .v { color: var(--ok); }
-.result.ng .v { color: var(--ng); }
-.result p { margin: 4px 0 0; font-size: 0.92rem; }
-.result .answer-text { white-space: pre-line; }
-.result .acts { display: flex; gap: 10px; flex-wrap: wrap; margin-top: 10px; }
+.order-list.is-ok .order-item { background: var(--green-soft); }
+.order-list.is-ng .order-item { background: var(--red-soft); }
+.submit-row { display: flex; gap: 10px; flex-wrap: wrap; margin-top: 12px; align-items: center; }
+.result { margin-top: 14px; border: 2px solid var(--ink); border-radius: 14px; padding: 14px 16px; animation: pop 0.25s ease-out; }
+.result.ok { background: var(--green-soft); }
+.result.ng { background: var(--red-soft); }
+.result .v { font-weight: 700; font-size: 1.02rem; display: flex; flex-wrap: wrap; gap: 6px 12px; align-items: center; }
+.result .v code { font-size: 1rem; }
+.result p { margin: 6px 0 0; font-size: 0.9rem; }
+.result ul { margin: 6px 0 0; padding-left: 1.2em; font-size: 0.88rem; }
+.result .sched { display: inline-block; margin-top: 10px; font-size: 0.8rem; font-weight: 700; padding: 1px 12px; border-radius: 99px; border: 1.5px solid var(--ink); background: var(--surface); }
+.result .sched.retry { background: var(--yellow); }
+.goto-line { margin-top: 12px; font-size: 0.85rem; font-weight: 700; }
+.acts { display: flex; justify-content: flex-end; gap: 10px; flex-wrap: wrap; align-items: center; margin-top: 14px; }
+.q-note { margin-top: 10px; font-size: 0.86rem; color: var(--muted); }
+.q-done { display: flex; flex-wrap: wrap; gap: 8px 12px; align-items: center; font-size: 0.86rem; margin-top: 8px; }
+.q-done .okmark { font-size: 0.72rem; font-weight: 700; padding: 0 9px; border-radius: 99px; border: 1.5px solid var(--ink); background: var(--green-soft); }
+.q-done .practice { font-size: 0.75rem; padding: 0 10px; border-radius: 99px; border: 1.5px solid var(--line); background: var(--surface); color: var(--muted); }
+.check.compact { padding: 14px 18px; }
+.check.compact .q-prompt { font-size: 0.92rem; margin: 0; }
 
 /* 右の列 */
-.side { display: grid; gap: 16px; position: sticky; top: 76px; min-width: 0; }
-.side h3 { font-size: 0.9rem; margin: 0 0 4px; }
-.score { font-size: 2rem; font-weight: 700; color: var(--accent); line-height: 1.2; }
-.score small { font-size: 0.85rem; color: var(--muted); font-weight: 400; margin-left: 4px; }
-.side-gate { margin-top: 10px; font-size: 0.8rem; color: var(--muted); background: var(--surface-2); border-radius: 8px; padding: 6px 10px; }
-.map { display: grid; gap: 8px; margin-top: 12px; }
-.map button { display: flex; justify-content: space-between; align-items: center; gap: 8px; text-align: left; border: 1px solid var(--line); background: var(--surface-2); border-radius: 8px; padding: 7px 10px; }
-.map button:hover { border-color: var(--accent); }
-.map button.active { border-color: var(--accent); box-shadow: inset 3px 0 0 var(--accent); }
-.map small { display: block; font-size: 0.7rem; color: var(--muted); line-height: 1.4; }
-.map b { font-size: 0.82rem; }
-.keypoints { margin: 6px 0 0; padding-left: 1.2em; font-size: 0.86rem; }
-.memo { width: 100%; min-height: 130px; resize: vertical; background: var(--surface-2); border: 1px solid var(--line-strong); border-radius: 8px; padding: 8px 10px; font-size: 0.86rem; margin-top: 6px; }
-.memo::placeholder { color: var(--muted); }
+.side { display: grid; gap: 22px; position: sticky; top: 84px; min-width: 0; }
+.side .panel { padding: 16px 16px; }
+.side h3 { margin: 0 0 10px; }
+.state-dots { display: flex; gap: 8px; margin-bottom: 10px; }
+.state-dots i { width: 34px; height: 34px; border-radius: 50%; border: 2px solid var(--ink); display: grid; place-items: center; font-style: normal; font-size: 0.8rem; font-weight: 700; background: var(--surface); }
+.state-dots i.ok { background: var(--green); color: #fff; }
+.state-dots i.due { background: var(--yellow); }
+.map { display: grid; }
+.map button { display: grid; grid-template-columns: 20px minmax(0, 1fr) auto; gap: 8px; align-items: center; text-align: left; border: none; border-bottom: 1.5px dashed var(--line); background: none; padding: 8px 2px; font-size: 0.8rem; }
+.map button:last-child { border-bottom: none; }
+.side-gate { margin-top: 10px; text-align: center; font-size: 0.8rem; font-weight: 700; background: var(--surface-2); border-radius: 10px; padding: 6px 10px; }
+.side-gate.open { background: var(--green-soft); }
+.keypoints { margin: 0; padding-left: 1.2em; font-size: 0.85rem; }
+.memo { width: 100%; min-height: 110px; resize: vertical; background: var(--surface); border: 2px solid var(--ink); border-radius: 10px; padding: 8px 10px; font-size: 0.85rem; }
 
-/* ===== 演習（章末演習・総合演習・復習・模擬試験） ===== */
-.run-bar { display: flex; align-items: center; gap: 16px; flex-wrap: wrap; max-width: 1060px; margin: 0 auto 22px; }
+/* ===== 演習（今日の想起・章末演習・総合演習・模擬試験） ===== */
+.run-bar { display: flex; align-items: center; gap: 16px; flex-wrap: wrap; max-width: 960px; margin: 0 auto 22px; }
 .run-bar .ttl { line-height: 1.3; margin-right: auto; min-width: 0; }
-.run-bar .ttl small { display: block; font-size: 0.72rem; color: var(--muted); }
-.run-bar .ttl b { font-size: 1.05rem; }
-.run-prog { display: flex; align-items: center; gap: 12px; font-size: 0.85rem; color: var(--muted); flex-wrap: wrap; }
-.run-prog .meter { width: 170px; }
-.run-prog b { color: var(--text); }
-.run-prog .over { color: var(--ng); font-weight: 700; }
-.run { display: grid; grid-template-columns: minmax(0, 1fr) 250px; gap: 22px; align-items: start; max-width: 1060px; margin: 0 auto; }
-.run .card { padding: 28px 34px; }
-.qtop { display: flex; justify-content: space-between; gap: 10px; flex-wrap: wrap; font-size: 0.8rem; }
-.qtop b { color: var(--accent); font-size: 0.9rem; }
-.stem { font-size: 1.15rem; font-weight: 700; margin: 14px 0 0; }
-.goto { display: flex; align-items: center; gap: 14px; width: 100%; text-align: left; border: 1px solid var(--accent-strong); background: var(--accent-soft); border-radius: 10px; padding: 12px 16px; margin-top: 14px; }
-.goto .ic { width: 36px; height: 36px; border-radius: 8px; background: var(--accent-strong); display: grid; place-items: center; flex: none; }
-.goto small { display: block; font-size: 0.72rem; color: var(--muted); }
-.goto b { font-size: 0.95rem; }
-.goto .arr { margin-left: auto; color: var(--accent); }
-.run-actions { display: flex; justify-content: space-between; gap: 10px; flex-wrap: wrap; margin-top: 20px; }
-.flag[aria-pressed="true"] { border-color: var(--accent); color: var(--accent); background: var(--accent-soft); }
-.kbd-hint { font-size: 0.75rem; color: var(--muted); }
-.grid10 { display: grid; grid-template-columns: repeat(5, 1fr); gap: 8px; margin-top: 12px; }
-.grid10 button { aspect-ratio: 1; border-radius: 8px; border: 1px solid transparent; background: var(--surface-2); color: var(--muted); font-weight: 700; padding: 0; }
-.grid10 button.ok { background: var(--ok-strong); color: #fff; }
-.grid10 button.ng { background: var(--ng-strong); color: #fff; }
-.grid10 button.done { background: var(--line-strong); color: var(--text); }
-.grid10 button.cur { border: 2px solid var(--accent); background: transparent; color: var(--accent); }
-.legend { display: flex; flex-wrap: wrap; gap: 4px 12px; font-size: 0.72rem; color: var(--muted); margin-top: 10px; }
-.legend i { display: inline-block; width: 9px; height: 9px; border-radius: 2px; margin-right: 4px; }
-.scope-scores { display: grid; gap: 10px; margin-top: 10px; font-size: 0.82rem; }
-.scope-scores .row { display: flex; justify-content: space-between; gap: 8px; margin-bottom: 4px; }
-.done-card { text-align: center; padding: 34px; }
-.done-card .score { font-size: 3rem; }
-.miss { border: 1px solid var(--line); border-radius: 10px; padding: 12px 16px; margin-top: 12px; text-align: left; }
+.run-bar .ttl small { display: block; font-size: 0.75rem; color: var(--muted); }
+.run-bar .ttl b { font-size: 1.3rem; }
+.run-prog { display: flex; gap: 10px; align-items: center; }
+.run-prog .pill { padding: 3px 12px; font-size: 0.82rem; }
+.run { display: grid; grid-template-columns: minmax(0, 1fr) 240px; gap: 28px; align-items: start; max-width: 960px; margin: 0 auto; }
+.run .card { background: var(--surface); border: 2px solid var(--ink); border-radius: var(--radius); box-shadow: 6px 6px 0 var(--ink); padding: 26px 26px 22px; position: relative; }
+.run .card > .type-tab { position: absolute; top: -15px; left: 18px; font-size: 0.8rem; font-weight: 700; padding: 2px 14px; border-radius: 99px; border: 2px solid var(--ink); background: var(--primary); color: #fff; }
+.run-foot { text-align: center; margin-top: 14px; font-size: 0.78rem; color: var(--muted); }
+.grid10 { display: grid; grid-template-columns: repeat(4, 1fr); gap: 8px; }
+.grid10 span { aspect-ratio: 1; border: 2px solid var(--ink); border-radius: 10px; background: var(--surface); position: relative; display: grid; place-items: center; font-weight: 700; }
+.grid10 span small { position: absolute; top: 3px; left: 6px; font-size: 0.65rem; font-weight: 400; }
+.grid10 span.ok { background: var(--green-soft); }
+.grid10 span.ng { background: var(--red-soft); }
+.grid10 span.again { background: var(--yellow-soft); border-style: dashed; }
+.grid10 span.cur { box-shadow: 0 0 0 3px var(--primary); }
+.legend { display: flex; flex-wrap: wrap; gap: 4px 12px; font-size: 0.75rem; margin-top: 12px; }
+.done-card { text-align: center; padding: 30px; }
+.score { font-size: 2.6rem; font-weight: 700; line-height: 1.2; }
+.score small { font-size: 0.9rem; color: var(--muted); font-weight: 400; margin-left: 4px; }
+.miss { border: 2px solid var(--ink); border-radius: 12px; padding: 12px 16px; margin-top: 12px; text-align: left; background: var(--surface-2); }
 .miss p { margin: 4px 0; font-size: 0.9rem; }
 
 /* ===== 設定 ===== */
-.settings { max-width: 720px; margin: 0 auto; display: grid; gap: 18px; }
+.settings { max-width: 720px; margin: 0 auto; display: grid; gap: 22px; }
 .settings h1 { font-size: 1.5rem; margin: 0; }
+.ex-list { display: grid; gap: 8px; margin-top: 10px; }
+.ex-row { display: flex; justify-content: space-between; gap: 10px; align-items: center; background: var(--surface-2); border: 1.5px solid var(--line); border-radius: 10px; padding: 8px 12px; font-size: 0.86rem; }
+.ex-row span { min-width: 0; overflow-wrap: anywhere; }
 
 /* ===== 教科書の部品（教材JSONの body で使う。references/textbook-components.md） ===== */
-.lesson-body p { margin: 0.65em 0; max-width: 48em; }
+.lesson-body p { margin: 0.7em 0; max-width: 48em; }
 .lesson-body ul, .lesson-body ol:not([class]) { padding-left: 1.4em; }
-.lesson-body h3 { font-size: 1.08rem; margin: 1.4em 0 0.4em; }
+.lesson-body h3 { font-size: 1.05rem; margin: 1.4em 0 0.4em; }
 .lesson-body h4 { font-size: 1rem; margin: 0 0 0.3em; }
-.lesson-body table { border-collapse: collapse; width: 100%; font-size: 0.9rem; }
-.lesson-body th, .lesson-body td { text-align: left; padding: 9px 14px; border-top: 1px solid var(--line); vertical-align: top; }
-.lesson-body th { background: var(--surface-2); font-weight: 700; }
-.lesson-body .sk-table, .lesson-body > table { display: block; overflow-x: auto; border: 1px solid var(--line); border-radius: 10px; margin: 1.2em 0; }
+.lesson-body table { border-collapse: collapse; width: 100%; font-size: 0.88rem; }
+.lesson-body th, .lesson-body td { text-align: left; padding: 8px 12px; border-top: 1.5px solid var(--line); vertical-align: top; white-space: nowrap; }
+.lesson-body th { background: var(--yellow); font-weight: 700; border-top: none; }
+.lesson-body > table, .lesson-body .sk-table { display: block; overflow-x: auto; border: 2px solid var(--ink); border-radius: 12px; box-shadow: var(--shadow-sm); margin: 1.2em 0; background: var(--surface); }
 /* 本文の重要語は蛍光ペンで目立たせる */
-.lesson-body p strong, .lesson-body li strong, .lesson-body dd strong { background: linear-gradient(transparent 55%, var(--mark-soft) 55%); color: #fff3cf; }
+.lesson-body p strong, .lesson-body li strong, .lesson-body dd strong { background: linear-gradient(transparent 55%, var(--yellow) 55%); }
 
-.sk-goals { background: var(--accent-soft); border: 1px solid var(--accent); border-radius: 12px; padding: 10px 16px; margin: 1em 0; }
-.sk-goals::before { content: "この節でわかること"; display: block; font-weight: 700; color: var(--accent); font-size: 0.8rem; }
+.sk-goals { background: var(--surface); border: 2px solid var(--ink); border-radius: 12px; padding: 10px 16px; margin: 1em 0; }
+.sk-goals::before { content: "この節でわかること"; display: block; font-weight: 700; font-size: 0.8rem; }
 .sk-goals ul, .sk-summary ul { margin: 4px 0 0; padding-left: 1.3em; }
 
-.sk-premise { background: var(--info-soft); border: 1px solid rgba(106, 168, 255, 0.35); border-left: 6px solid var(--info); border-radius: 10px; padding: 12px 18px; margin: 1.2em 0; }
-.sk-premise::before { content: "📘 前提：" attr(data-term) " とは"; display: block; font-weight: 700; color: var(--info); margin-bottom: 4px; }
-.sk-premise p { margin: 0.4em 0; }
-.lesson-body .sk-premise strong { background: none; color: #a9c9ff; }
+.sk-premise { background: #e8f0ff; border: 2px solid var(--ink); border-radius: 12px; padding: 12px 18px; margin: 1.2em 0; }
+.sk-premise::before { content: "📘 前提：" attr(data-term) " とは"; display: block; font-weight: 700; margin-bottom: 4px; }
+.sk-premise p { margin: 0.35em 0; font-size: 0.92rem; }
+.lesson-body .sk-premise strong { background: none; color: var(--blue); }
 
-.sk-callout { display: block; border-radius: 10px; padding: 12px 16px 12px 52px; margin: 1.2em 0; position: relative; border: 1px solid; }
-.sk-callout::before { position: absolute; left: 16px; top: 12px; font-size: 1.2rem; line-height: 1.5; }
-.sk-callout::after { position: absolute; left: 52px; top: -0.75em; font-size: 0.7rem; font-weight: 700; padding: 0 8px; border-radius: 4px; }
+.sk-callout { border-radius: 12px; padding: 18px 16px 12px; margin: 1.6em 0 1.2em; position: relative; border: 2px solid var(--ink); }
+.sk-callout::after { position: absolute; left: 14px; top: -12px; font-size: 0.72rem; font-weight: 700; padding: 0 10px; border-radius: 99px; border: 2px solid var(--ink); }
 .sk-callout p { margin: 0.25em 0; }
-.sk-callout.point { background: rgba(242, 201, 76, 0.09); border-color: rgba(242, 201, 76, 0.3); }
-.sk-callout.point::before { content: "💡"; }
-.sk-callout.point::after { content: "POINT"; background: var(--mark); color: var(--mark-ink); letter-spacing: 0.05em; }
-.sk-callout.warn { background: var(--ng-soft); border-color: rgba(240, 137, 79, 0.4); }
-.sk-callout.warn::before { content: "⚠️"; }
-.sk-callout.warn::after { content: "注意"; background: var(--ng-strong); color: #fff; }
-.sk-callout.analogy { background: var(--info-soft); border-color: rgba(106, 168, 255, 0.3); }
-.sk-callout.analogy::before { content: "🧩"; }
-.sk-callout.analogy::after { content: "たとえると"; background: #3b6fc4; color: #fff; }
-.sk-callout.tip { background: var(--ok-soft); border-color: rgba(60, 194, 141, 0.35); }
-.sk-callout.tip::before { content: "🛠️"; }
-.sk-callout.tip::after { content: "実務メモ"; background: var(--ok-strong); color: #fff; }
+.sk-callout.point { background: var(--yellow-soft); }
+.sk-callout.point::after { content: "POINT"; background: var(--yellow); }
+.sk-callout.warn { background: var(--red-soft); }
+.sk-callout.warn::after { content: "注意"; background: var(--accent); color: #fff; }
+.sk-callout.analogy { background: var(--lavender); }
+.sk-callout.analogy::after { content: "たとえると"; background: var(--primary); color: #fff; }
+.sk-callout.tip { background: var(--surface); }
+.sk-callout.tip::after { content: "実務メモ"; background: var(--surface-2); }
 
-.sk-terms { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 10px; margin: 1em 0; }
-.sk-terms > div { background: var(--surface); border: 1px solid var(--line); border-radius: 10px; padding: 8px 14px; }
-.sk-terms dt { font-weight: 700; color: var(--accent); }
-.sk-terms dd { margin: 2px 0 0; font-size: 0.9rem; }
+.sk-terms { display: grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); gap: 12px; margin: 1.2em 0; }
+.sk-terms > div { background: var(--surface); border: 2px solid var(--ink); border-radius: 12px; padding: 10px 14px; }
+.sk-terms dt { display: inline-block; font-weight: 700; font-size: 0.82rem; background: var(--blue-soft); border-radius: 4px; padding: 0 6px; }
+.sk-terms dd { margin: 4px 0 0; font-size: 0.85rem; }
 
 .sk-flow { list-style: none; padding: 0; margin: 1.2em 0; display: flex; flex-wrap: wrap; gap: 14px; counter-reset: sk-step; }
-.sk-flow > li { counter-increment: sk-step; flex: 1 1 150px; background: var(--surface-2); border: 1px solid var(--line); border-radius: 10px; padding: 32px 12px 10px; position: relative; font-size: 0.9em; }
-.sk-flow > li::before { content: counter(sk-step); position: absolute; top: 7px; left: 10px; width: 1.7em; height: 1.7em; border-radius: 50%; background: var(--accent-strong); color: #fff; display: grid; place-items: center; font-weight: 700; font-size: 0.78rem; }
-.sk-flow > li:not(:last-child)::after { content: "▶"; position: absolute; right: -14px; top: 50%; transform: translateY(-50%); color: var(--accent); font-size: 0.8rem; z-index: 1; }
+.sk-flow > li { counter-increment: sk-step; flex: 1 1 120px; background: var(--surface); border: 2px solid var(--ink); border-radius: 12px; padding: 36px 10px 10px; position: relative; font-size: 0.85em; }
+.sk-flow > li::before { content: counter(sk-step); position: absolute; top: 8px; left: 10px; width: 22px; height: 22px; border-radius: 50%; background: var(--yellow); border: 2px solid var(--ink); display: grid; place-items: center; font-weight: 700; font-size: 0.75rem; }
+.sk-flow > li:not(:last-child)::after { content: "›"; position: absolute; right: -11px; top: 50%; transform: translateY(-50%); font-weight: 700; z-index: 1; }
 
-.sk-steps { list-style: none; padding: 0; margin: 1em 0; display: grid; gap: 12px; counter-reset: sk-steps; }
-.sk-steps > li { counter-increment: sk-steps; position: relative; padding-left: 38px; }
-.sk-steps > li::before { content: counter(sk-steps); position: absolute; left: 0; top: 2px; width: 26px; height: 26px; border-radius: 50%; background: var(--surface-2); border: 1px solid var(--line-strong); color: var(--accent); display: grid; place-items: center; font-weight: 700; font-size: 0.8rem; }
+.sk-steps { list-style: none; padding: 0; margin: 1em 0; display: grid; gap: 14px; counter-reset: sk-steps; }
+.sk-steps > li { counter-increment: sk-steps; position: relative; padding-left: 42px; }
+.sk-steps > li::before { content: counter(sk-steps); position: absolute; left: 0; top: 0; width: 28px; height: 28px; border-radius: 8px; background: var(--yellow); border: 2px solid var(--ink); display: grid; place-items: center; font-weight: 700; font-size: 0.85rem; }
 .sk-steps > li p { margin: 0 0 6px; }
 
-.sk-nest { border: 1.5px dashed var(--accent); border-radius: 12px; padding: 26px 12px 12px; margin: 10px 0; position: relative; background: rgba(123, 148, 255, 0.05); display: flex; flex-wrap: wrap; gap: 10px; align-items: flex-start; }
+.sk-nest { border: 2px solid var(--ink); border-radius: 12px; padding: 30px 12px 12px; margin: 12px 0; position: relative; background: #ffd5c6; display: flex; flex-wrap: wrap; gap: 10px; align-items: flex-start; }
 .sk-nest > .sk-nest { flex: 1 1 180px; margin: 0; }
-.sk-nest::before { content: attr(data-label); position: absolute; top: 4px; left: 12px; font-size: 0.78rem; font-weight: 700; color: var(--accent); }
-.sk-nest .sk-nest { border-color: var(--ok); background: rgba(60, 194, 141, 0.06); }
-.sk-nest .sk-nest::before { color: var(--ok); }
-.sk-nest .sk-nest .sk-nest { border-color: var(--mark); background: rgba(242, 201, 76, 0.06); }
-.sk-nest .sk-nest .sk-nest::before { color: var(--mark); }
-.sk-item { display: inline-block; background: var(--surface); border: 1px solid var(--line-strong); border-radius: 8px; padding: 4px 12px; font-weight: 700; font-size: 0.88em; }
-.sk-caption { flex-basis: 100%; font-size: 0.82em; color: var(--muted); margin: 0; }
+.sk-nest::before { content: attr(data-label); position: absolute; top: 6px; left: 12px; font-size: 0.8rem; font-weight: 700; }
+.sk-nest .sk-nest { background: #ffe9c7; }
+.sk-nest .sk-nest .sk-nest { background: var(--surface); }
+.sk-item { display: inline-block; background: var(--surface); border: 2px solid var(--ink); border-radius: 8px; padding: 4px 12px; font-weight: 700; font-size: 0.85em; }
+.sk-caption { flex-basis: 100%; font-size: 0.8em; color: var(--muted); margin: 0; }
 
-.sk-compare { display: grid; grid-template-columns: repeat(auto-fit, minmax(210px, 1fr)); gap: 12px; margin: 1.2em 0; }
-.sk-compare > div { background: var(--surface); border: 1px solid var(--line); border-radius: 10px; padding: 12px 16px; }
-.sk-compare > div:first-child { border-top: 5px solid var(--muted); }
-.sk-compare > div:nth-child(2) { border-top: 5px solid var(--accent); }
-.sk-compare > div:nth-child(3) { border-top: 5px solid var(--ok); }
-.sk-compare ul { margin: 0; padding-left: 1.2em; font-size: 0.92em; }
+.sk-compare { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 14px; margin: 1.2em 0; }
+.sk-compare > div { background: var(--surface); border: 2px solid var(--ink); border-radius: 12px; padding: 12px 16px; }
+.sk-compare > div:nth-child(2) { background: var(--green-soft); }
+.sk-compare > div:nth-child(3) { background: var(--blue-soft); }
+.sk-compare h4 { font-size: 0.92rem; }
+.sk-compare ul { margin: 0; padding-left: 1.2em; font-size: 0.88em; }
 
-.sk-cells { margin: 1.2em 0; background: var(--surface-2); border: 1px solid var(--line); border-radius: 10px; padding: 20px 16px 14px; text-align: center; }
-.sk-cells > span { display: inline-grid; place-items: center; min-width: 44px; height: 44px; padding: 0 8px; margin: 3px; border: 1.5px solid var(--accent); border-radius: 6px; color: var(--accent); font-family: var(--mono); font-size: 1.15rem; background: var(--surface); vertical-align: middle; }
-.sk-cells > span.on { background: var(--mark); border-color: var(--mark); color: var(--mark-ink); }
-.sk-cells > span.dim { opacity: 0.45; border-style: dashed; }
-.sk-cells[data-label]::after { content: attr(data-label); display: block; width: min(100%, 460px); margin: 8px auto 0; padding-top: 14px; color: var(--accent); font-weight: 700; font-size: 0.85rem;
-  background: linear-gradient(var(--muted), var(--muted)) 0 8px / 100% 1.5px no-repeat, linear-gradient(var(--muted), var(--muted)) 0 0 / 1.5px 9.5px no-repeat, linear-gradient(var(--muted), var(--muted)) 100% 0 / 1.5px 9.5px no-repeat; }
+.sk-cells { margin: 1.2em 0; background: var(--surface); border: 2px solid var(--ink); border-radius: 12px; padding: 18px 16px 14px; text-align: center; }
+.sk-cells > span { display: inline-grid; place-items: center; min-width: 46px; height: 46px; padding: 0 8px; margin: 3px; border: 2px solid var(--ink); border-radius: 8px; font-family: var(--mono); font-weight: 700; background: var(--surface); vertical-align: middle; }
+.sk-cells > span.on { background: var(--primary); color: #fff; }
+.sk-cells > span.dim { border-style: dashed; color: var(--faint); background: var(--surface-2); }
+.sk-cells[data-label]::after { content: attr(data-label); display: block; width: min(100%, 460px); margin: 8px auto 0; padding-top: 14px; font-weight: 700; font-size: 0.82rem;
+  background: linear-gradient(var(--ink), var(--ink)) 0 8px / 100% 2px no-repeat, linear-gradient(var(--ink), var(--ink)) 0 0 / 2px 10px no-repeat, linear-gradient(var(--ink), var(--ink)) 100% 0 / 2px 10px no-repeat; }
 
-.sk-figure { margin: 1.3em 0; background: var(--surface-2); border: 1px solid var(--line); border-radius: 10px; padding: 16px; }
+.sk-figure { margin: 1.3em 0; background: var(--surface); border: 2px solid var(--ink); border-radius: 12px; padding: 16px; }
 .sk-figure svg { display: block; width: 100%; height: auto; max-height: 340px; }
-.sk-figure figcaption { font-size: 0.8rem; color: var(--muted); text-align: center; margin-top: 8px; }
-.sk-figure .sk-fill-primary { fill: var(--accent-strong); }
-.sk-figure .sk-fill-primary-soft { fill: var(--accent-soft); }
-.sk-figure .sk-fill-accent { fill: var(--ok-strong); }
-.sk-figure .sk-fill-accent-soft { fill: var(--ok-soft); }
-.sk-figure .sk-fill-warn { fill: var(--ng-strong); }
-.sk-figure .sk-fill-warn-soft { fill: var(--ng-soft); }
-.sk-figure .sk-fill-mark { fill: var(--mark); }
-.sk-figure .sk-fill-mark-soft { fill: var(--mark); opacity: 0.16; }
-.sk-figure .sk-fill-muted { fill: var(--surface); }
-.sk-figure .sk-fill-surface { fill: var(--surface-2); }
-.sk-figure .sk-stroke { stroke: var(--line-strong); }
-.sk-figure .sk-stroke-primary { stroke: var(--accent); }
-.sk-figure .sk-stroke-accent { stroke: var(--ok); }
-.sk-figure .sk-stroke-warn { stroke: var(--ng); }
-.sk-figure .sk-stroke-mark { stroke: var(--mark); }
+.sk-figure figcaption { font-size: 0.8rem; text-align: left; margin-top: 8px; }
+.sk-figure .sk-fill-primary { fill: var(--primary); }
+.sk-figure .sk-fill-primary-soft { fill: var(--primary-soft); }
+.sk-figure .sk-fill-accent { fill: var(--green); }
+.sk-figure .sk-fill-accent-soft { fill: var(--green-soft); }
+.sk-figure .sk-fill-warn { fill: var(--accent); }
+.sk-figure .sk-fill-warn-soft { fill: var(--accent-soft); }
+.sk-figure .sk-fill-mark { fill: var(--yellow); }
+.sk-figure .sk-fill-mark-soft { fill: var(--yellow-soft); }
+.sk-figure .sk-fill-muted { fill: var(--surface-2); }
+.sk-figure .sk-fill-surface { fill: #e3e6ee; }
+.sk-figure .sk-stroke { stroke: var(--ink); }
+.sk-figure .sk-stroke-primary { stroke: var(--primary); }
+.sk-figure .sk-stroke-accent { stroke: var(--green); }
+.sk-figure .sk-stroke-warn { stroke: var(--accent); }
+.sk-figure .sk-stroke-mark { stroke: #c9a200; }
 .sk-figure .sk-text { fill: var(--text); font-family: var(--font); }
 .sk-figure .sk-text-muted { fill: var(--muted); font-family: var(--font); }
 .sk-figure .sk-text-on { fill: #fff; font-family: var(--font); font-weight: 700; }
-.sk-figure .sk-text-dark { fill: var(--mark-ink); font-family: var(--font); font-weight: 700; }
-.sk-figure .sk-text-primary { fill: var(--accent); font-family: var(--font); font-weight: 700; }
-.sk-figure .sk-text-accent { fill: var(--ok); font-family: var(--font); font-weight: 700; }
-.sk-figure .sk-text-warn { fill: var(--ng); font-family: var(--font); font-weight: 700; }
+.sk-figure .sk-text-dark { fill: var(--ink); font-family: var(--font); font-weight: 700; }
+.sk-figure .sk-text-primary { fill: var(--primary); font-family: var(--font); font-weight: 700; }
+.sk-figure .sk-text-accent { fill: #178a47; font-family: var(--font); font-weight: 700; }
+.sk-figure .sk-text-warn { fill: #d4511c; font-family: var(--font); font-weight: 700; }
 
-.sk-badge { display: inline-block; font-family: var(--mono); font-size: 0.85em; font-weight: 700; padding: 1px 10px; border-radius: 99px; border: 1px solid; }
-.sk-badge.ok { color: var(--ok); border-color: var(--ok); background: var(--ok-soft); }
-.sk-badge.warn { color: var(--mark); border-color: var(--mark); background: rgba(242, 201, 76, 0.1); }
-.sk-badge.err { color: var(--ng); border-color: var(--ng); background: var(--ng-soft); }
-.sk-badge.info { color: var(--info); border-color: var(--info); background: var(--info-soft); }
+.sk-badge { display: inline-block; font-family: var(--mono); font-size: 0.82em; font-weight: 700; padding: 0 10px; border-radius: 99px; border: 2px solid var(--ink); }
+.sk-badge.ok { background: var(--green-soft); }
+.sk-badge.warn { background: var(--yellow); }
+.sk-badge.err { background: var(--red-soft); }
+.sk-badge.info { background: var(--blue-soft); }
 .sk-badge-list { display: grid; gap: 8px; margin: 1em 0; }
-.sk-badge-list > div { display: grid; grid-template-columns: minmax(150px, max-content) 1fr; gap: 12px; align-items: start; background: var(--surface); border: 1px solid var(--line); border-radius: 10px; padding: 8px 12px; }
+.sk-badge-list > div { display: grid; grid-template-columns: minmax(150px, max-content) 1fr; gap: 12px; align-items: start; background: var(--surface); border: 2px solid var(--ink); border-radius: 12px; padding: 8px 12px; font-size: 0.9rem; }
 
-.sk-summary { background: var(--surface); border: 1px solid var(--mark); border-radius: 12px; padding: 10px 16px; margin: 1.4em 0 0.6em; }
-.sk-summary::before { content: "⭐ まとめ"; display: block; font-weight: 700; color: var(--mark); }
-
-/* ===== 出題（システムが制御する。学習者は答えるだけ） ===== */
-.qhead { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; justify-content: space-between; }
-.qhead-l { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; font-size: 0.78rem; color: var(--muted); }
-.qs { font-size: 0.72rem; font-weight: 700; padding: 1px 9px; border-radius: 99px; white-space: nowrap; }
-.qs.new { background: var(--surface-2); color: var(--muted); }
-.qs.due { background: rgba(242, 201, 76, 0.16); color: var(--mark); }
-.qs.wait { background: var(--accent-soft); color: var(--accent); }
-.qs.closed { background: var(--ok-soft); color: var(--ok); }
-.qs.excluded { background: transparent; color: var(--muted); border: 1px dashed var(--line-strong); }
-.exclude-btn { background: none; border: 1px solid var(--line); border-radius: 99px; padding: 1px 10px; font-size: 0.72rem; color: var(--muted); }
-.exclude-btn:hover { border-color: var(--ng); color: var(--ng); }
-.think { margin-top: 14px; }
-.think-label { font-size: 0.8rem; color: var(--muted); }
-.think-bar { height: 4px; border-radius: 99px; background: var(--line); overflow: hidden; margin-top: 6px; }
-.think-bar span { display: block; height: 100%; width: 0; background: var(--accent); }
-.think-bar span.run { animation: think 3s linear forwards; }
-@keyframes think { to { width: 100%; } }
-.q-note { margin-top: 10px; font-size: 0.86rem; color: var(--muted); display: flex; flex-wrap: wrap; gap: 10px; align-items: center; }
-.q-done { display: flex; flex-wrap: wrap; gap: 6px 14px; align-items: center; font-size: 0.86rem; margin-top: 8px; }
-.q-done .okmark { color: var(--ok); font-weight: 700; }
-.result .sched { margin-top: 6px; font-size: 0.84rem; color: var(--text); }
-.check.warmup { border-color: rgba(242, 201, 76, 0.45); background: rgba(242, 201, 76, 0.05); }
-.check.warmup .check-badge { background: var(--mark); color: var(--mark-ink); }
-.check.retry { border-color: rgba(240, 137, 79, 0.5); background: rgba(240, 137, 79, 0.05); }
-.check.retry .check-badge { background: var(--ng-strong); }
-.today-card { border-color: rgba(242, 201, 76, 0.35); }
-.today-card h2 b { color: var(--mark); }
-.queue { display: grid; gap: 6px; margin-top: 8px; font-size: 0.8rem; }
-.queue div { display: flex; justify-content: space-between; gap: 8px; background: var(--surface-2); border-radius: 8px; padding: 5px 10px; }
-.queue div.cur { box-shadow: inset 3px 0 0 var(--accent); }
-.queue .ok { color: var(--ok); }
-.queue .ng { color: var(--ng); }
-.ex-list { display: grid; gap: 8px; margin-top: 10px; }
-.ex-row { display: flex; justify-content: space-between; gap: 10px; align-items: center; background: var(--surface-2); border-radius: 8px; padding: 8px 12px; font-size: 0.86rem; }
-.ex-row span { min-width: 0; overflow-wrap: anywhere; }
+.sk-summary { background: var(--surface); border: 2px solid var(--ink); border-radius: 12px; padding: 10px 16px; margin: 1.4em 0 0.6em; }
+.sk-summary::before { content: "⭐ まとめ"; display: block; font-weight: 700; }
 
 /* ===== トースト・紙吹雪 ===== */
-.toast { position: fixed; z-index: 70; left: 50%; bottom: 24px; transform: translateX(-50%); background: var(--text); color: var(--bg); padding: 12px 18px; border-radius: 12px; max-width: calc(100vw - 32px); font-weight: 700; box-shadow: 0 6px 20px rgba(0, 0, 0, 0.35); animation: pop 0.2s; }
+.toast { position: fixed; z-index: 70; left: 50%; bottom: 24px; transform: translateX(-50%); background: var(--ink); color: #fff; padding: 12px 18px; border-radius: 12px; max-width: calc(100vw - 32px); font-weight: 700; box-shadow: 4px 4px 0 var(--yellow); animation: pop 0.2s; }
 #confetti { position: fixed; inset: 0; width: 100%; height: 100%; pointer-events: none; z-index: 60; }
 
 /* ===== 幅に合わせた並べ替え ===== */
 @media (max-width: 1100px) {
   .lesson { grid-template-columns: minmax(0, 1fr) 240px; }
   /* 目次は左からスライドして出す */
-  .toc { position: fixed; z-index: 50; top: 0; left: 0; bottom: 0; max-height: none; width: min(320px, 86vw); border-radius: 0; transform: translateX(-105%); transition: transform 0.25s ease; box-shadow: 6px 0 24px rgba(0, 0, 0, 0.5); }
+  .toc { position: fixed; z-index: 50; top: 0; left: 0; bottom: 0; max-height: none; width: min(300px, 86vw); background: var(--bg); border-right: 2px solid var(--ink); padding: 14px 16px; transform: translateX(-105%); transition: transform 0.25s ease; }
   .toc.open { transform: none; }
   .toc-head .btn { display: inline-flex; }
-  .toc-backdrop { display: block; position: fixed; inset: 0; z-index: 45; background: rgba(0, 0, 0, 0.5); opacity: 0; pointer-events: none; transition: opacity 0.25s; }
+  .toc-backdrop { display: block; position: fixed; inset: 0; z-index: 45; background: rgba(29, 31, 46, 0.45); opacity: 0; pointer-events: none; transition: opacity 0.25s; }
   .toc-backdrop.open { opacity: 1; pointer-events: auto; }
   .toc-open-btn { display: inline-flex; }
 }
 @media (max-width: 860px) {
-  .home, .lesson, .run { grid-template-columns: minmax(0, 1fr); }
+  .home-row, .lesson, .run { grid-template-columns: minmax(0, 1fr); }
   .side { position: static; }
-  .article { padding: 22px 18px 28px; }
-  .run .card { padding: 20px 18px; }
   .search { display: none; }
   .hdr-progress .meter { display: none; }
   .brand-name strong { max-width: 50vw; }
@@ -475,9 +458,11 @@ main { padding: 28px 20px 70px; }
 @media (max-width: 480px) {
   main { padding: 18px 16px 56px; }
   .appbar { padding: 8px 16px; gap: 10px; }
-  .article h1 { font-size: 1.6rem; }
+  .article h1 { font-size: 1.45rem; }
+  .today-card h2 b { font-size: 3.2rem; }
   .sk-flow > li:not(:last-child)::after { display: none; }
   .sk-badge-list > div { grid-template-columns: 1fr; }
+  .grid10 { grid-template-columns: repeat(5, 1fr); }
 }
 @media (prefers-reduced-motion: reduce) {
   *, *::before, *::after { animation: none !important; transition: none !important; scroll-behavior: auto !important; }
@@ -920,9 +905,9 @@ main { padding: 28px 20px 70px; }
     function renderBody() {
       body.replaceChildren();
       const prompt = el("div", { class: "q-prompt" });
-      if (q.type === "truefalse") prompt.append("正しければ○、誤りなら×。", el("br"), el("b", { html: `「${q.prompt}」` }));
-      else prompt.innerHTML = q.prompt;
+      prompt.innerHTML = q.prompt;
       body.append(prompt);
+      if (q.type === "truefalse") body.append(el("div", { class: "muted small", style: "margin-top:2px", text: "正しければ ○、誤りなら × を押してください。" }));
       if (q.code) body.append(el("pre", {}, [el("code", { text: q.code })]));
       body.append(el("div", { class: "answer-area" }));
     }
@@ -945,15 +930,15 @@ main { padding: 28px 20px 70px; }
       const a = area();
       a.replaceChildren();
       if (q.type === "choice" || q.type === "predict") {
-        const wide = q.type === "predict" || q.options.some((o) => o.length > 18);
-        a.append(el("div", { class: `choices${wide ? " wide" : ""}` }, view.order.map((optionIndex, position) => el("button", { class: "choice", type: "button", "data-index": String(optionIndex), onclick: () => submit(optionIndex) }, [el("span", { class: "k", text: KANA[position] }), el("span", { class: "t", text: q.options[optionIndex] })]))));
+        const short = q.type !== "predict" && q.options.length === 4 && q.options.every((o) => o.length <= 10);
+        a.append(el("div", { class: `choices${short ? " grid2" : ""}` }, view.order.map((optionIndex, position) => el("button", { class: "choice", type: "button", "data-index": String(optionIndex), onclick: () => submit(optionIndex) }, [el("span", { class: "k", text: KANA[position] }), el("span", { class: "t", text: q.options[optionIndex] })]))));
       } else if (q.type === "truefalse") {
         a.append(el("div", { class: "ox" }, [[true, "○"], [false, "×"]].map(([value, mark]) => el("button", { type: "button", "data-value": String(value), "aria-label": value ? "正しい（○）" : "誤り（×）", text: mark, onclick: () => submit(value) }))));
       } else if (q.type === "fill") {
-        const input = el("input", { type: "text", placeholder: "答えを入力して Enter", "aria-label": "答え", autocomplete: "off", spellcheck: "false" });
-        const button = el("button", { class: "btn primary", type: "button", text: "答える", onclick: () => { if (input.value.trim()) submit(input.value); } });
+        const input = el("input", { type: "text", placeholder: "半角英数字", "aria-label": "答え", autocomplete: "off", spellcheck: "false" });
+        const button = el("button", { class: "btn small", type: "button", text: "答え合わせ", onclick: () => { if (input.value.trim()) submit(input.value); } });
         input.addEventListener("keydown", (e) => { if (e.key === "Enter" && !e.isComposing && input.value.trim()) submit(input.value); });
-        a.append(el("div", { class: "fillrow" }, [input, q.unit ? el("span", { text: q.unit }) : null, button]));
+        a.append(el("div", { class: "fillrow" }, [input, q.unit ? el("span", { text: q.unit }) : null, button, el("span", { class: "kbd-hint", text: "Enter で答え合わせ" })]));
         if (opts.focus) input.focus({ preventScroll: true });
       } else if (q.type === "order") {
         const items = view.items;
@@ -966,7 +951,7 @@ main { padding: 28px 20px 70px; }
           ]),
         ])));
         draw();
-        a.append(list, el("div", { class: "submit-row" }, [el("button", { class: "btn primary", type: "button", text: "答え合わせ", onclick: () => submit(items.slice()) })]));
+        a.append(list, el("div", { class: "submit-row" }, [el("button", { class: "btn go", type: "button", text: "答え合わせ", onclick: () => submit(items.slice()) })]));
       }
     }
     function submit(response) {
@@ -1012,28 +997,34 @@ main { padding: 28px 20px 70px; }
     }
     function showResult(correct, grade, rec, response) {
       const box = el("div", { class: `result ${correct ? "ok" : "ng"}` });
+      const answerText = correctAnswerText(q, view);
+      const answerNode = q.type === "fill" ? el("code", { text: answerText }) : el("span", { style: "white-space:pre-line", text: answerText });
       if (correct) {
-        const note = opts.practice ? "（練習なので、記録はしません）" : grade === "hard" ? (recOf(id).wrongDay === today() ? "間違えたあとの正解なので、日を変えてもう一度出します。" : "少し時間がかかったので、日を変えてもう一度確かめます。") : "";
-        box.append(el("div", { class: "v", text: "✓ 正解" }), note ? el("p", { class: "muted small", text: note }) : null);
+        const note = opts.practice ? "練習なので、記録はしません。" : grade === "hard" ? (recOf(id).wrongDay === today() ? "間違えたあとの正解なので、日を変えてもう一度出します。" : "少し時間がかかったので、日を変えてもう一度確かめます。") : "";
+        box.append(el("div", { class: "v" }, ["正解！", el("span", {}, ["答えは ", answerNode])]), note ? el("p", { class: "muted small", text: note }) : null);
       } else {
-        box.append(el("div", { class: "v" }, ["✕ 不正解　正解は ", el("span", { style: "white-space:pre-line", text: correctAnswerText(q, view) })]));
-        const notes = q.optionNotes;
-        if (notes && typeof response === "number" && notes[response]) box.append(el("p", {}, [el("b", { text: `あなたの答え「${q.options[response]}」：` }), notes[response]]));
+        box.append(el("div", { class: "v" }, ["ざんねん", el("span", {}, ["正解は ", answerNode])]));
       }
       box.append(el("p", { html: q.explanation }));
+      // 誤った選択肢ごとの解説（optionNotes）
+      const notes = q.optionNotes;
+      if (!correct && notes && (q.type === "choice" || q.type === "predict")) {
+        const items = view.order.map((i, position) => (notes[i] ? el("li", {}, [el("b", { text: `${KANA[position]} ${q.options[i]}：` }), notes[i]]) : null)).filter(Boolean);
+        if (items.length) box.append(el("ul", {}, items));
+      }
       const sched = scheduleText(rec);
-      if (sched) box.append(el("p", { class: "sched", text: sched }));
-      if (!correct && opts.retryNote) box.append(el("p", { class: "sched", text: opts.retryNote }));
+      if (!correct && opts.retryNote) box.append(el("div", {}, [el("span", { class: "sched retry", text: `↻ ${opts.retryNote}` })]));
+      else if (sched) box.append(el("div", {}, [el("span", { class: "sched", text: sched })]));
+      result.replaceChildren(box);
       if (opts.refs) {
         for (const ref of (q.refs || []).filter((r) => parseRef(r)).slice(0, 1)) {
           const target = parseRef(ref);
-          box.append(el("button", { class: "goto", type: "button", onclick: () => openSection(target.section.id, { itemId: target.item ? target.item.id : null }) }, [el("span", { class: "ic" }, [bookIcon()]), el("span", {}, [el("small", { text: "教科書で確認する" }), el("b", { text: refLabel(ref) })]), el("span", { class: "arr", text: "›" })]));
+          result.append(el("div", { class: "goto-line" }, ["教科書で確認する：", el("button", { class: "link-btn", type: "button", text: refLabel(ref), onclick: () => openSection(target.section.id, { itemId: target.item ? target.item.id : null }) })]));
         }
       }
-      result.replaceChildren(box);
       if (opts.onNext) {
-        const next = el("button", { class: "btn primary", type: "button", text: opts.nextLabel || "次へ ›", onclick: () => goNext() });
-        result.append(el("div", { class: "acts" }, [next, correct && opts.autoAdvance ? el("span", { class: "kbd-hint", text: "自動で次へ進みます" }) : el("span", { class: "kbd-hint", text: "Enter で次へ" })]));
+        const next = el("button", { class: "btn go", type: "button", onclick: () => goNext() }, [opts.nextLabel || "次へ", el("kbd", { text: "Enter" })]);
+        result.append(el("div", { class: "acts" }, [correct && opts.autoAdvance ? el("span", { class: "kbd-hint", text: "自動で次へ進みます" }) : null, next]));
         if (correct && opts.autoAdvance) st.advanceTimer = setTimeout(goNext, ADVANCE_MS);
       }
       if (correct) celebrateAt(box); else shake(root);
@@ -1195,24 +1186,27 @@ main { padding: 28px 20px 70px; }
     // 今日の想起：期日が来た問題（システムが選ぶ）
     const nextDue = allIds.filter((id) => stateOf(id) === "wait").map((id) => recOf(id).due).sort()[0];
     const todayCard = el("section", { class: "panel today-card" }, [
-      el("div", { class: "eyebrow", text: "今日の想起" }),
-      due.length ? el("h2", {}, ["今日の問題 ", el("b", { text: `${due.length}問` })]) : el("h2", { text: "今日の問題はありません" }),
-      el("p", { class: "muted", style: "margin:0 0 12px;font-size:.9rem", text: due.length
-        ? `前に解いた問題のうち、もう一度確かめる日が来たものです。${Math.min(due.length, RUN_SIZE)}問ずつ、節を混ぜて出します。`
-        : nextDue ? `次は ${formatDate(nextDue)} に出す問題があります。` : "節を読んで、すぐ確認を解くと、ここに出る問題が増えていきます。" }),
-      due.length ? el("div", { class: "btn-row" }, [el("button", { class: "btn primary", type: "button", text: "今日の問題を解く ›", onclick: () => startRun("today") })]) : null,
+      el("div", {}, [
+        el("span", { class: "eyebrow today", text: "今日の想起" }),
+        due.length ? el("h2", {}, ["今日の問題", el("b", { class: "num", text: String(due.length) }), "問"]) : el("h2", { text: "今日の問題はありません" }),
+        el("p", { text: due.length ? "忘れかけた頃の問題を、システムが選んでいます。" : nextDue ? `次は ${formatDate(nextDue)} に出す問題があります。` : "節を読んですぐ確認を解くと、ここに出る問題が増えていきます。" }),
+      ]),
+      due.length ? el("button", { class: "btn primary", type: "button", text: "今日の問題を解く", onclick: () => startRun("today") }) : null,
+    ]);
+    const percentCard = el("section", { class: "panel" }, [
+      el("span", { class: "eyebrow", text: "覚えた割合" }),
+      el("div", { class: "big-pct" }, [String(percent), el("small", { text: "%" })]),
+      el("div", { class: "meter" }, [el("span", { style: `width:${percent}%` })]),
+      el("div", { class: "split" }, [el("span", { class: "num", text: `覚えた ${closedN} / ${active.length}` }), el("span", { class: "num", text: `学習中 ${learningN}` })]),
     ]);
 
+    const resumeIds = sectionChecks(resumeSection);
     const resume = el("section", { class: "panel resume" }, [
-      el("div", { class: "eyebrow", text: lastSection ? "続きから学習" : "ここから学習を始める" }),
-      el("div", { class: "muted", style: "font-size:.85rem;margin-top:10px", text: chapterLabel(resumeChapter) }),
-      el("h2", { text: `${sectionCode(resumeSection)}　${resumeSection.title}` }),
-      el("div", { class: "meta" }, [
-        el("span", { text: `すぐ確認 ${sectionChecks(resumeSection).filter((id) => recOf(id).everCorrect).length} / ${sectionChecks(resumeSection).length}` }),
-        el("span", { text: `読了目安 ${readingMinutes(resumeSection)}分` }),
-        isSectionDone(resumeSection) ? el("span", { class: "tag ok", text: "完了" }) : null,
-      ]),
-      el("div", { class: "btn-row" }, [el("button", { class: "btn primary", text: lastSection ? "学習を再開 ›" : "学習を始める ›", onclick: () => openSection(resumeSection.id) })]),
+      el("span", { class: "eyebrow", style: "background:var(--blue-soft)", text: lastSection ? "続きから学習" : "ここから学習" }),
+      el("div", { class: "where" }, [el("small", { text: chapterLabel(resumeChapter) }), el("b", { text: `${sectionCode(resumeSection)}　${resumeSection.title}` })]),
+      el("div", { class: "dots", "aria-hidden": "true" }, resumeIds.map((id) => el("i", { class: recOf(id).everCorrect ? "on" : "" }))),
+      el("span", { class: "info num", text: `すぐ確認 ${resumeIds.filter((id) => recOf(id).everCorrect).length}/${resumeIds.length} ・ ${readingMinutes(resumeSection)} 分` }),
+      el("button", { class: "btn go", text: lastSection ? "学習を再開" : "学習を始める", onclick: () => openSection(resumeSection.id) }),
     ]);
 
     const chapterCards = chapters.map((chapter) => {
@@ -1221,52 +1215,38 @@ main { padding: 28px 20px 70px; }
       const touched = ids.some((id) => recOf(id).status !== "new");
       const done = chapter.sections.every(isSectionDone);
       const first = chapter.sections.find((s) => !isSectionDone(s)) || chapter.sections[0];
-      return el("button", { class: "chapter-card", onclick: () => openSection(first.id) }, [
-        el("div", { class: "row" }, [el("span", { class: "no", text: `第${chapterNo(chapter)}章` }), el("span", { class: `tag ${done ? "ok" : touched ? "now" : ""}`, text: done ? "読了" : touched ? "学習中" : "未着手" })]),
+      return el("button", { class: `chapter-card${touched ? "" : " untouched"}`, onclick: () => openSection(first.id) }, [
+        el("div", { class: "row" }, [el("span", { class: "no", text: String(chapterNo(chapter)) }), el("span", { class: `tag ${done ? "ok" : touched ? "now" : ""}`, text: done ? "読了" : touched ? "学習中" : "未着手" })]),
         el("h3", { text: chapter.title }),
-        el("div", { class: "meter ok" }, [el("span", { style: `width:${ids.length ? Math.round((closed / ids.length) * 100) : 0}%` })]),
-        el("div", { class: "foot" }, [el("span", { text: `節 ${chapter.sections.filter(isSectionDone).length} / ${chapter.sections.length}` }), el("span", { text: `覚えた ${closed} / ${ids.length}問` })]),
+        el("div", { class: "meter" }, [el("span", { style: `width:${ids.length ? Math.round((closed / ids.length) * 100) : 0}%` })]),
+        el("div", { class: "foot" }, [el("span", { text: `節 ${chapter.sections.filter(isSectionDone).length} / ${chapter.sections.length}` }), el("span", { text: `覚えた ${closed} / ${ids.length} 問` })]),
       ]);
     });
 
-    const drillCards = [];
+    const bottom = [];
     if (finalExam.length) {
-      drillCards.push(el("section", { class: "panel drill-card" }, [
-        el("div", {}, [el("h3", { text: "総合演習" }), el("p", { text: `章をまたいだ問題 ${finalExam.length}問。まだ解いていない問題から、1回${RUN_SIZE}問ずつ出します。` })]),
-        el("button", { class: "btn", text: "挑戦する ›", onclick: () => startRun("final") }),
+      bottom.push(el("section", { class: "panel drill-card" }, [
+        el("div", {}, [el("span", { class: "eyebrow final", text: "総合演習" }), el("p", { style: "margin-top:10px", text: `全章から ${finalExam.length} 問` })]),
+        el("button", { class: "btn", text: "挑戦する", onclick: () => startRun("final") }),
       ]));
     }
     if (content.meta.exam) {
       const exam = content.meta.exam;
-      drillCards.push(el("section", { class: "panel drill-card" }, [
-        el("div", {}, [el("h3", { text: "模擬試験" }), el("p", { text: `${exam.questionCount}問・${exam.minutes}分${exam.passingRate ? `・合格ライン ${exam.passingRate}%` : ""}。途中で正誤は出さず、学習履歴にも記録しません。` })]),
-        el("button", { class: "btn", text: "受験する ›", onclick: () => startRun("mock") }),
+      bottom.push(el("section", { class: "panel drill-card" }, [
+        el("div", {}, [el("span", { class: "eyebrow mock", text: "模擬試験" }), el("p", { style: "margin-top:10px", text: `${exam.questionCount} 問 ・ 制限時間 ${exam.minutes} 分${exam.passingRate ? ` ・ 合格ライン ${exam.passingRate}%` : ""}` })]),
+        el("button", { class: "btn", text: "受験する", onclick: () => startRun("mock") }),
       ]));
     }
+    bottom.push(el("section", { class: "panel", style: "grid-column:span 1" }, [
+      el("span", { class: "eyebrow goal", text: "この教材のゴール" }),
+      el("ul", { class: "goal-list" }, (content.meta.goals || []).map((goal) => el("li", { text: goal }))),
+    ]));
 
     app.append(el("div", { class: "wrap home" }, [
-      el("div", { class: "home-main" }, [
-        todayCard,
-        resume,
-        el("section", {}, [el("h2", { class: "sec-title", text: "目次" }), el("div", { class: "cards" }, chapterCards)]),
-        drillCards.length ? el("section", {}, [el("h2", { class: "sec-title", text: "演習" }), el("div", { style: "display:grid;gap:14px" }, drillCards)]) : null,
-      ]),
-      el("aside", { class: "home-side" }, [
-        el("section", { class: "panel" }, [
-          el("div", { class: "eyebrow", text: "覚えた割合" }),
-          el("div", { class: "big-pct num" }, [String(percent), el("small", { text: "%" })]),
-          el("div", { class: "meter ok" }, [el("span", { style: `width:${percent}%` })]),
-          el("p", { class: "muted", style: "font-size:.8rem;margin:10px 0 0;line-height:1.6", text: "日を変えて続けて正解した問題を「覚えた」として数えます（速く正解した問題は2回、それ以外は3回）。" }),
-          el("div", { class: "mini-stats" }, [
-            el("div", {}, [el("span", { text: "覚えた" }), el("b", { class: "num", text: `${closedN} / ${active.length}` })]),
-            el("div", {}, [el("span", { text: "学習中" }), el("b", { class: "num", text: String(learningN) })]),
-          ]),
-        ]),
-        el("section", { class: "panel" }, [
-          el("h3", { style: "font-size:.95rem;margin:0", text: "この教材のゴール" }),
-          el("ul", { class: "goal-list" }, (content.meta.goals || []).map((goal) => el("li", { text: goal }))),
-        ]),
-      ]),
+      el("div", { class: "home-row" }, [todayCard, percentCard]),
+      resume,
+      el("section", {}, [el("h2", { class: "sec-title", text: "目次" }), el("div", { class: "cards" }, chapterCards)]),
+      el("div", { class: "home-bottom" }, bottom),
     ]));
   }
 
@@ -1278,22 +1258,24 @@ main { padding: 28px 20px 70px; }
     document.querySelector(".toc-backdrop").classList.remove("open");
   }
   function buildToc(current) {
-    const currentChapter = chapterBySectionId.get(current.id);
-    const children = [el("div", { class: "toc-head" }, [el("span", { class: "eyebrow", text: "目次" }), el("button", { class: "btn small", "aria-label": "目次を閉じる", text: "✕", onclick: closeToc })])];
+    const children = [el("div", { class: "toc-head" }, [
+      el("button", { class: "link-btn", style: "font-size:.82rem", text: "‹ ホーム", onclick: () => showView("home") }),
+      el("button", { class: "btn small", "aria-label": "目次を閉じる", text: "✕", onclick: closeToc }),
+    ])];
     for (const chapter of chapters) {
-      children.push(el("div", { class: "ch" }, [`第${chapterNo(chapter)}章 ${chapter.title}`, el("span", { class: "num", text: `${chapter.sections.filter(isSectionDone).length}/${chapter.sections.length}` })]));
+      children.push(el("div", { class: "ch", text: chapterLabel(chapter) }));
       for (const section of chapter.sections) {
         const isCurrent = section.id === current.id;
+        const done = isSectionDone(section);
         children.push(el("button", { class: `toc-link${isCurrent ? " current" : ""}`, "aria-current": isCurrent ? "page" : null, onclick: () => openSection(section.id) }, [
-          el("span", { class: `st ${isSectionDone(section) ? "done" : isCurrent ? "cur" : ""}`, text: isSectionDone(section) ? "✓" : "" }),
+          el("span", { class: `st ${done ? "done" : isCurrent ? "cur" : ""}`, text: done ? "✓" : "" }),
           `${sectionCode(section)} ${section.title}`,
         ]));
       }
+      if ((chapter.exercise || []).length) children.push(el("button", { class: "drill-link", type: "button", text: `第${chapterNo(chapter)}章 章末演習へ ›`, onclick: () => startRun("chapter", chapter.id) }));
     }
-    children.push(el("hr"));
-    if ((currentChapter.exercise || []).length) children.push(el("button", { class: "toc-link", onclick: () => startRun("chapter", currentChapter.id) }, [el("span", { class: "st drill", text: "✓" }), `第${chapterNo(currentChapter)}章 章末演習へ`]));
-    if (finalExam.length) children.push(el("button", { class: "toc-link", onclick: () => startRun("final") }, [el("span", { class: "st drill", text: "★" }), "総合演習へ"]));
-    return el("nav", { class: "panel toc", "aria-label": "目次" }, children);
+    if (finalExam.length) children.push(el("div", { style: "margin-top:14px" }, [el("button", { class: "drill-link final", type: "button", text: "総合演習へ ›", onclick: () => startRun("final") })]));
+    return el("nav", { class: "toc", "aria-label": "目次" }, children);
   }
 
   function renderLesson() {
@@ -1312,22 +1294,19 @@ main { padding: 28px 20px 70px; }
     const ownDue = sectionChecks(section).filter((id) => stateOf(id) === "due" && recOf(id).everCorrect);
     const otherDue = interleave(sortDue(dueIds().filter((id) => !ownDue.includes(id) && !(checkInfo.get(id) && checkInfo.get(id).section === section)))).slice(0, WARMUP_SIZE);
     const opening = [];
-    if (ownDue.length) opening.push(blockOf("revisit", "この節の復習", "前に解いたこの節の問題のうち、もう一度確かめる日が来たものです。", ownDue));
-    if (otherDue.length) opening.push(blockOf("warmup", "読む前に思い出す", "ほかの節の問題のうち、もう一度確かめる日が来たものです。", otherDue));
+    if (ownDue.length) opening.push(blockOf("この節の復習", `この節から ${ownDue.length} 問 ・ 出題日が来た問題`, ownDue));
+    if (otherDue.length) opening.push(blockOf("読む前に思い出す", `ほかの節から ${otherDue.length} 問 ・ 出題日が来た問題`, otherDue));
 
-    const blocks = section.items.map((item, i) => renderBlock(section, item, i));
-
-    const article = el("article", { class: "panel article" }, [
-      el("span", { class: "sec-no", text: sectionCode(section) }),
-      el("h1", { text: section.title }),
+    const article = el("article", { class: "article" }, [
+      el("div", { class: "muted", style: "font-size:.8rem", text: chapterLabel(chapter) }),
+      el("div", { class: "sec-head" }, [el("span", { class: "sec-no", text: sectionCode(section) }), el("h1", { text: section.title })]),
       el("div", { class: "meta" }, [
-        el("span", { text: `読了目安 ${readingMinutes(section)}分` }),
-        el("span", { text: `すぐ確認 ${section.items.length}問` }),
-        prereqs.length ? el("span", { text: `前提：${prereqs.map((p) => `${sectionCode(p)} ${p.title}`).join("、")}` }) : null,
+        el("span", { text: `読了目安 ${readingMinutes(section)} 分` }),
+        el("span", { text: `すぐ確認 ${section.items.length} 問` }),
+        ...prereqs.map((p) => el("span", {}, ["前提：", el("button", { class: "link-btn", type: "button", text: `${sectionCode(p)} ${p.title}`, onclick: () => openSection(p.id) })])),
       ]),
       ...opening,
-      el("div", { class: "guide" }, [el("b", { text: "⚡" }), "各項目のすぐ下に「すぐ確認」があります。問題文を読んで答えを思い浮かべると、選択肢が出ます。すべてに一度正解すると、次の節へ進めます。"]),
-      ...blocks,
+      ...section.items.map((item, i) => renderBlock(section, item, i)),
       el("div", { id: "retry-end" }),
       sources.length ? el("details", { class: "sources" }, [
         el("summary", { text: `参考出典（${sources.length}件）` }),
@@ -1339,19 +1318,12 @@ main { padding: 28px 20px 70px; }
     const toExercise = chapter.sections[chapter.sections.length - 1] === section && (chapter.exercise || []).length > 0;
     const nextButton = el("button", { class: "btn", id: "next-sec", onclick: () => toExercise || !next ? startRun("chapter", chapter.id) : openSection(next.id) });
     const main = el("div", { style: "min-width:0" }, [
-      el("div", { class: "lesson-top" }, [
-        el("div", { class: "crumbs" }, [
-          el("button", { class: "btn small toc-open-btn", text: "☰ 目次", onclick: openToc }),
-          el("button", { class: "link-btn", text: "ホーム", onclick: () => showView("home") }), "›",
-          el("span", { text: chapterLabel(chapter) }), "›", el("span", { text: sectionCode(section) }),
-        ]),
-      ]),
+      el("div", { class: "lesson-top" }, [el("button", { class: "btn small toc-open-btn", text: "☰ 目次", onclick: openToc })]),
       article,
       el("div", { class: "pager" }, [
         prev ? el("button", { class: "btn", text: `‹ ${sectionCode(prev)} ${prev.title}`, onclick: () => openSection(prev.id) }) : el("span"),
-        nextButton,
+        el("div", {}, [nextButton, el("p", { class: "gate-text", id: "gate-text" })]),
       ]),
-      el("p", { class: "gate-text", id: "gate-text" }),
     ]);
 
     const memo = el("textarea", { class: "memo", id: "memo", placeholder: "気づいたことを書き留めておけます（このブラウザに保存されます）", "aria-label": "メモ" });
@@ -1363,32 +1335,40 @@ main { padding: 28px 20px 70px; }
     });
     const side = el("aside", { class: "side" }, [
       el("section", { class: "panel" }, [
-        el("h3", { text: "本文とすぐ確認の対応" }),
-        el("div", { class: "side-gate", id: "side-gate" }),
+        el("h3", {}, [el("span", { class: "eyebrow", text: "この節の状態" })]),
+        el("div", { class: "state-dots", id: "state-dots" }),
         el("div", { class: "map", id: "side-map" }),
+        el("div", { class: "side-gate", id: "side-gate" }),
       ]),
-      section.keyPoints && section.keyPoints.length ? el("section", { class: "panel" }, [el("h3", { text: "この節の要点" }), el("ul", { class: "keypoints" }, section.keyPoints.map((p) => el("li", { html: p })))]) : null,
-      el("section", { class: "panel" }, [el("h3", { text: "メモ" }), memo]),
+      section.keyPoints && section.keyPoints.length ? el("section", { class: "panel" }, [el("h3", {}, [el("span", { class: "eyebrow today", text: "この節の要点" })]), el("ul", { class: "keypoints" }, section.keyPoints.map((p) => el("li", { html: p })))]) : null,
+      el("section", { class: "panel" }, [el("h3", {}, [el("span", { class: "eyebrow", text: "メモ" })]), memo]),
     ]);
 
     app.append(el("div", { class: "lesson", id: "lesson" }, [toc, main, side]), backdrop);
     updateLessonStatus();
   }
-  function blockOf(kind, title, text, ids) {
-    return el("div", { class: `check ${kind === "warmup" ? "warmup" : ""}` }, [
-      el("div", { class: "check-head" }, [el("span", { class: "check-badge", text: title }), el("span", { text })]),
-      ...ids.map((id) => el("div", { style: "margin-top:10px" }, [questionCard(id, { record: true, label: el("span", { text: scopeLabel(id) }), onDone: () => updateLessonStatus() }).el])),
+  const TYPE_NAME = { choice: "選択", predict: "結果予測", truefalse: "○×", fill: "穴埋め", order: "並べ替え" };
+  const CIRCLED = "①②③④⑤⑥⑦⑧⑨⑩";
+  const checkLabel = (section, index) => `${sectionCode(section)} ${CIRCLED[index] || index + 1}`;
+  // 本文の前に差し込む問題のまとまり（黄色の枠に、形式のタブ付きのカードを並べる）
+  function blockOf(title, note, ids) {
+    return el("div", { class: "check warmup" }, [
+      el("div", { class: "check-head" }, [el("span", { class: "check-badge", text: title }), el("span", { class: "note", text: note })]),
+      ...ids.map((id) => el("div", { class: "subcard" }, [
+        el("span", { class: "type-tab", text: TYPE_NAME[questionById.get(id).type] }),
+        questionCard(id, { record: true, label: el("span", { text: scopeLabel(id) }), onDone: () => updateLessonStatus() }).el,
+      ])),
     ]);
   }
   function renderBlock(section, item, index) {
-    const children = [];
-    if (item.kind === "example") {
-      children.push(el("div", { class: "example", id: `head-${item.id}` }, [
-        el("div", { class: "example-head" }, [el("span", { class: "lbl", text: "例題" }), el("b", { html: item.title })]),
+    const isExample = item.kind === "example";
+    const children = [el("h2", { id: `head-${item.id}` }, [el("span", { class: "no", text: String(index + 1) }), isExample ? "例題" : item.title])];
+    if (isExample) {
+      children.push(el("div", { class: "example" }, [
+        el("div", { class: "example-head" }, [el("b", { html: item.title })]),
         el("div", { class: "lesson-body", html: item.body }),
       ]));
     } else {
-      children.push(el("h2", { id: `head-${item.id}`, text: itemLabel(item) }));
       children.push(el("div", { class: "lesson-body", html: item.body }));
     }
     children.push(checkBox(section, item, index));
@@ -1398,28 +1378,29 @@ main { padding: 28px 20px 70px; }
   // すぐ確認：初めて解くときは記録する。もう解いた問題は、出題日が来たら上の「この節の復習」に出るので、ここでは練習として解ける
   function checkBox(section, item, index) {
     const id = item.check.id;
-    const isExample = item.kind === "example";
+    const label = () => el("span", { text: checkLabel(section, index) });
     const box = el("div", { class: "check", id: `chk-${id}` }, [
-      el("div", { class: "check-head" }, [
-        el("span", { class: "check-badge", text: `⚡ すぐ確認 ${index + 1}${isExample ? "　類題" : ""}` }),
-        el("span", { text: isExample ? "「例題」と同じ考え方で" : `「${itemLabel(item)}」から` }),
-      ]),
+      el("div", { class: "check-head" }, [el("span", { class: "check-badge", text: `${item.kind === "example" ? "類題" : "すぐ確認"} ・ ${TYPE_NAME[item.check.type]}` })]),
     ]);
     const r = recOf(id);
     if (r.everCorrect || r.status === "excluded") {
-      const holder = el("div");
+      box.classList.add("compact");
       const summary = el("div", { class: "q-done" }, [
-        r.status === "excluded" ? null : el("span", { class: "okmark", text: "✓ 正解済み" }),
+        r.status === "excluded" ? el("span", { class: "muted", text: "出さない問題" }) : el("span", { class: "okmark", text: "✓ 正解済み" }),
         stateTag(id),
-        el("button", { class: "link-btn", type: "button", text: r.status === "excluded" ? "問題を見る" : "練習で解く（記録しない）", onclick: () => { holder.replaceChildren(questionCard(id, { practice: true, onDone: () => updateLessonStatus(), onExcludeChange: () => updateLessonStatus() }).el); setTimeout(startVisibleCards, 0); } }),
+        el("button", { class: "practice", type: "button", text: r.status === "excluded" ? "問題を見る" : "練習で解く（記録しない）", onclick: () => {
+          box.classList.remove("compact");
+          summary.replaceWith(questionCard(id, { practice: true, label: label(), onDone: () => updateLessonStatus(), onExcludeChange: () => updateLessonStatus() }).el);
+          setTimeout(startVisibleCards, 0);
+        } }),
       ]);
-      holder.append(summary);
-      box.append(holder);
+      box.append(summary);
       return box;
     }
     box.append(questionCard(id, {
       record: true,
-      retryNote: "この問題は、次の項目を読んだあとにもう一度出します。",
+      label: label(),
+      retryNote: "次の項目のあとに、もう一度出します",
       onDone: (res) => {
         updateLessonStatus();
         if (!res.correct) queueRetry(section, item, id);
@@ -1438,11 +1419,13 @@ main { padding: 28px 20px 70px; }
     const nextItem = section.items[i + 1];
     const slot = nextItem ? document.querySelector(`.retry-slot[data-after="${nextItem.id}"]`) : document.getElementById("retry-end");
     if (!slot) return;
+    const home = checkInfo.get(id).item;
     slot.append(el("div", { class: "check retry" }, [
-      el("div", { class: "check-head" }, [el("span", { class: "check-badge", text: "↻ もう一度" }), el("span", { text: `さっき間違えた「${itemLabel(item)}」の問題です` })]),
+      el("div", { class: "check-head" }, [el("span", { class: "check-badge", text: "↻ もう一度" }), el("span", { class: "note", text: `さっき間違えた「${itemLabel(home)}」の問題` })]),
       questionCard(id, {
         record: true, retry: true,
-        retryNote: "日を変えて、もう一度出します。",
+        label: el("span", { text: checkLabel(section, section.items.indexOf(home)) }),
+        retryNote: "日を変えて、もう一度出します",
         onDone: (res) => {
           updateLessonStatus();
           if (!res.correct) queueRetry(section, nextItem || item, id);
@@ -1466,17 +1449,26 @@ main { padding: 28px 20px 70px; }
     const target = toExercise ? `第${chapterNo(chapter)}章 章末演習` : next ? `${sectionCode(next)} ${next.title}` : null;
     nextButton.hidden = !target;
     nextButton.disabled = left > 0;
-    nextButton.className = `btn${left ? "" : " primary"}`;
+    nextButton.className = `btn${left ? "" : " go"}`;
     nextButton.textContent = `${left ? "🔒 " : ""}${target} ›`;
     const gate = document.getElementById("gate-text");
-    gate.replaceChildren(left ? "すぐ確認すべてに一度正解すると、次へ進めます（あと " : "🔓 次へ進めます", left ? el("b", { text: String(left) }) : null, left ? " 問）" : null);
+    gate.hidden = !target;
+    gate.replaceChildren(...(left ? ["すぐ確認 あと ", el("b", { text: `${left} 問` }), " で開きます"] : ["🔓 次へ進めます"]));
     gate.classList.toggle("open", left === 0);
     const sideGate = document.getElementById("side-gate");
-    sideGate.replaceChildren(left ? "🔒 次へ進むまで あと " : "🔓 次へ進めます", left ? el("b", { text: String(left) }) : null, left ? " 問正解" : null);
+    sideGate.textContent = left ? `次の節まで あと ${left} 問` : "🔓 次の節へ進めます";
     sideGate.classList.toggle("open", left === 0);
     renderHeader();
-    document.getElementById("side-map").replaceChildren(...section.items.map((item) => el("button", { type: "button", onclick: () => scrollToEl(document.getElementById(`blk-${item.id}`)) }, [
-      el("span", {}, [el("small", { text: itemLabel(item) }), el("b", { text: recOf(item.check.id).everCorrect ? "正解済み" : "未正解" })]),
+    // 項目ごとの丸：正解済み＝緑の✓、今日間違えてまだ正解していない＝黄の↻、まだ＝番号
+    const again = (id) => recOf(id).wrongDay === today() && !recOf(id).everCorrect;
+    document.getElementById("state-dots").replaceChildren(...section.items.map((item, i) => {
+      const id = item.check.id;
+      const ok = recOf(id).everCorrect;
+      return el("i", { class: ok ? "ok" : again(id) ? "due" : "", title: itemLabel(item), text: ok ? "✓" : again(id) ? "↻" : String(i + 1) });
+    }));
+    document.getElementById("side-map").replaceChildren(...section.items.map((item, i) => el("button", { type: "button", onclick: () => scrollToEl(document.getElementById(`blk-${item.id}`)) }, [
+      el("span", { class: "num", text: String(i + 1) }),
+      el("span", { text: item.kind === "example" ? "例題" : item.title }),
       stateTag(item.check.id),
     ])));
   }
@@ -1525,8 +1517,8 @@ main { padding: 28px 20px 70px; }
       el("button", { class: "btn", text: run.kind === "mock" && !run.finished ? "‹ 採点して終了" : run.backSection ? "‹ 教科書に戻る" : "‹ ホームへ", onclick: leaveRun }),
       el("div", { class: "ttl" }, [el("small", { text: run.label }), el("b", { text: run.title })]),
       el("div", { class: "run-prog" }, [
-        el("b", { class: "num", text: run.finished ? `${answered}問` : `${answered + 1}問目（残り ${run.queue.length}問）` }),
-        el("span", { class: "num", id: "run-time", text: runTimeText() }),
+        el("span", { class: "pill num", text: run.finished ? `${answered} 問 解答` : `${answered + 1} / ${answered + 1 + run.queue.length} 問目` }),
+        el("span", { class: "pill num", id: "run-time", text: runTimeText() }),
       ]),
     ]);
     app.append(bar, el("div", { class: "run" }, [run.finished ? renderRunResult() : renderRunCard(), renderRunSide()]));
@@ -1565,21 +1557,27 @@ main { padding: 28px 20px 70px; }
     });
     run.card = card;
     keyTarget = card;
-    const wrap = el("section", { class: "panel card", id: "run-card" }, [card.el]);
-    if (isMock) wrap.append(el("div", { class: "submit-row" }, [el("span", { class: "kbd-hint", text: "答えると次の問題へ進みます" })]));
-    else wrap.append(el("div", { class: "submit-row" }, [el("span", { class: "kbd-hint", text: "選択肢は数字キーでも選べます" })]));
-    return wrap;
+    const q = questionById.get(id);
+    const hint = isMock ? "答えると次の問題へ進みます" : q.type === "fill" ? "入力欄には自動でカーソルが入ります ・ Enter で答え合わせ・次へ" : "選択肢は数字キーでも選べます ・ Enter で次へ";
+    return el("div", { style: "min-width:0" }, [
+      el("section", { class: "panel card", id: "run-card" }, [el("span", { class: "type-tab", text: TYPE_NAME[q.type] }), card.el]),
+      el("p", { class: "run-foot", text: hint }),
+    ]);
   }
   function renderRunSide() { return el("aside", { class: "side", id: "run-side" }, runSideChildren()); }
   function renderRunSideInto() { const side = document.getElementById("run-side"); if (side) side.replaceChildren(...runSideChildren()); }
   function runSideChildren() {
     const isMock = run.kind === "mock";
-    const rows = run.log.map((entry, i) => el("div", {}, [el("span", { text: `${i + 1}. ${scopeLabel(entry.id)}${entry.retry ? "（もう一度）" : ""}` }), isMock && !run.finished ? el("span", { class: "muted", text: "回答済み" }) : el("span", { class: entry.correct ? "ok" : "ng", text: entry.correct ? "○" : "×" })]));
-    if (!run.finished && run.current) rows.push(el("div", { class: "cur" }, [el("span", { text: `${run.log.length + 1}. ${scopeLabel(run.current)}` }), el("span", { class: "muted", text: "解答中" })]));
+    // 1マス1問：解いた問題（○ / ×）、いま解いている問題（紫の枠）、これから出す問題（もう一度は ↻）
+    const hide = isMock && !run.finished;
+    const cells = run.log.map((entry) => ({ cls: hide ? "" : entry.correct ? "ok" : "ng", mark: hide ? "✓" : entry.correct ? "○" : "×" }));
+    const seen = new Set(run.log.map((e) => e.id));
+    if (!run.finished && run.current) cells.push({ cls: "cur", mark: seen.has(run.current) ? "↻" : "" });
+    if (!run.finished) for (const id of run.queue) cells.push(seen.has(id) || id === run.current ? { cls: "again", mark: "↻" } : { cls: "", mark: "" });
     return [el("section", { class: "panel" }, [
-      el("h3", { style: "font-size:.9rem", text: "この回の問題" }),
-      el("p", { class: "muted", style: "font-size:.8rem;margin:0", text: isMock ? "答えると次の問題へ進みます。" : `残り ${run.queue.length}問。間違えた問題は、少しあとにもう一度出ます。` }),
-      el("div", { class: "queue" }, rows),
+      el("h3", {}, [el("span", { class: "eyebrow", text: "この回の問題" })]),
+      el("div", { class: "grid10" }, cells.map((c, i) => el("span", { class: c.cls }, [el("small", { text: String(i + 1) }), c.mark]))),
+      el("p", { class: "muted", style: "font-size:.75rem;margin:12px 0 0;line-height:1.7;white-space:pre-line", text: isMock ? "答えると次の問題へ進みます。紫の枠：いま解いている問題" : "○ 正解　× 不正解　↻ もう一度\n紫の枠：いま解いている問題" }),
     ])];
   }
   function renderRunResult() {
