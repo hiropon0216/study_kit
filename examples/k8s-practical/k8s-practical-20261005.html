@@ -188,6 +188,18 @@ main { padding: 28px 20px 70px; }
 .page { padding: 22px 30px 30px; min-width: 0; }
 .page.left { background: #fffdf7; }
 .page.right .pin { position: sticky; top: 84px; }
+/* 予告問題（見開きを開く前に、問いだけを1枚で見せる） */
+.book.single { grid-template-columns: minmax(0, 1fr); }
+.page.preq { max-width: 820px; width: 100%; margin: 0 auto; padding: 26px 30px 30px; }
+.preq-lead { font-weight: 700; margin: 0 0 18px; }
+.preq-list { list-style: none; margin: 0; padding: 0; display: grid; gap: 16px; }
+.preq-q { border: 2px solid var(--ink); border-radius: 14px; background: var(--lavender); padding: 14px 18px; box-shadow: var(--shadow-sm); }
+.preq-meta { display: flex; gap: 10px; align-items: center; flex-wrap: wrap; }
+.preq-meta .exclude-btn { margin-left: auto; }
+.preq-q .type-tab { font-size: 0.72rem; font-weight: 700; padding: 0 10px; border-radius: 99px; border: 2px solid var(--ink); background: var(--surface); }
+.preq-q .q-prompt { font-size: 1.1rem; }
+.check.reading { border-style: dashed; box-shadow: none; background: var(--surface-2); }
+.reading-lead { font-weight: 700; margin: 0 0 6px; }
 .gutter { background: linear-gradient(90deg, #e3e6ef, #c9cede 50%, #e3e6ef); border-left: 2px solid var(--ink); border-right: 2px solid var(--ink); }
 .page-head { display: flex; justify-content: space-between; align-items: center; gap: 10px; flex-wrap: wrap; margin-bottom: 16px; font-size: 0.78rem; color: var(--muted); }
 .page-tag { font-size: 0.75rem; font-weight: 700; padding: 1px 12px; border-radius: 99px; border: 1.5px solid var(--ink); background: var(--ink); color: #fff; }
@@ -950,7 +962,7 @@ main { padding: 28px 20px 70px; }
       st.phase = "preview";
       const withButton = opts.previewButton !== false;
       area().replaceChildren(el("div", { class: "preview" }, [
-        el("p", { text: withButton ? "読む前に、問いだけ見ておきましょう。答えは左のページにあります。答えを探しながら読んでください。" : "この問いも、読みながら答えを探してください。前の問題に答えると、答えの欄が出ます。" }),
+        el("p", { text: withButton ? "読む前に、問いだけ見ておきましょう。答えは左のページにあります。答えを探しながら読んでください。" : "前の問題に答えると、答えの欄が出ます。" }),
         withButton ? el("button", { class: "btn go", type: "button", onclick: () => showAnswerUi() }, ["読んだので答える", el("kbd", { text: "Enter" })]) : null,
       ]));
     }
@@ -1154,7 +1166,7 @@ main { padding: 28px 20px 70px; }
       sectionId, page: 0, card: null,
       opening: { own: ownDue, other: otherDue },
       masked: new Set(section.items.filter(itemDone).map((item) => item.id)),
-      revealed: new Set(), retries: {}, retryAt: {}, wrong: {},
+      revealed: new Set(), retries: {}, retryAt: {}, wrong: {}, steps: {},
     };
     // 扉がなければ1つめの項目から。項目を指定されたら、そのページを開く
     const pages = lessonPages(section);
@@ -1371,6 +1383,7 @@ main { padding: 28px 20px 70px; }
     keyHandler = (event) => {
       if (event.key === "ArrowRight") turnPage(lesson.page + 1);
       else if (event.key === "ArrowLeft") turnPage(lesson.page - 1);
+      else if (event.key === "Enter") advanceStep();
     };
     renderPage();
   }
@@ -1389,6 +1402,16 @@ main { padding: 28px 20px 70px; }
     if (lesson.card) lesson.card.stop();
     lesson.card = null;
     keyTarget = null;
+    const book = document.getElementById("book");
+    // 予告問題の段階：見開きを開く前に、この項目の問いだけを1枚で見せる
+    if (page.kind === "item" && stepOf(page.item) === "preq") {
+      book.classList.add("single");
+      book.replaceChildren(preqSheet(section, page));
+      renderFoot(pages);
+      updateLessonStatus();
+      return;
+    }
+    book.classList.remove("single");
     const left = el("section", { class: "page left", "aria-label": "教科書" });
     const right = el("section", { class: "page right", "aria-label": "問題集" });
     if (page.kind === "open") fillOpenPage(section, left, right);
@@ -1396,7 +1419,12 @@ main { padding: 28px 20px 70px; }
     else fillEndPage(section, left, right);
     // 右ページ（問題集）は、左ページを読み進めても画面に残す
     right.replaceChildren(el("div", { class: "pin" }, [...right.childNodes]));
-    document.getElementById("book").replaceChildren(left, el("div", { class: "gutter", "aria-hidden": "true" }), right);
+    book.replaceChildren(left, el("div", { class: "gutter", "aria-hidden": "true" }), right);
+    renderFoot(pages);
+    updateLessonStatus();
+    setTimeout(startVisibleCards, 0);
+  }
+  function renderFoot(pages) {
     const prev = pages[lesson.page - 1];
     const next = pages[lesson.page + 1];
     document.getElementById("book-foot").replaceChildren(
@@ -1404,8 +1432,48 @@ main { padding: 28px 20px 70px; }
       el("span", { class: "kbd-hint", text: "← → でページをめくれます" }),
       next ? el("button", { class: "btn", text: `${pageName(next)} ›`, onclick: () => turnPage(lesson.page + 1) }) : el("span"),
     );
-    updateLessonStatus();
-    setTimeout(startVisibleCards, 0);
+  }
+
+  // 項目の進め方：予告問題（問いだけを見る）→ 見開きで読む →「読んだので答える」で問題が見える
+  // まだ答えていない問題がある項目だけ。どこまで進んだかは、節を開いているあいだ項目ごとに覚えておく
+  const pendingChecks = (item) => item.checks.filter((q) => isActive(q.id) && !recOf(q.id).everCorrect && !lesson.wrong[q.id]);
+  function stepOf(item) {
+    if (!pendingChecks(item).length) return "done";
+    return lesson.steps[item.id] || "preq";
+  }
+  function setStep(item, step) {
+    lesson.steps[item.id] = step;
+    renderPage();
+    // 読み始めるときは本文の頭へ。答えるときは読んでいた位置のまま（右ページは画面に残っている）
+    if (step !== "answer") scrollToEl(document.getElementById("lesson"));
+  }
+  // Enter で次の段階へ（予告問題 → 読む → 答える）
+  function advanceStep() {
+    const page = lessonPages(sectionById.get(lesson.sectionId))[lesson.page];
+    if (!page || page.kind !== "item") return;
+    const step = stepOf(page.item);
+    if (step === "preq") setStep(page.item, "read");
+    else if (step === "read") setStep(page.item, "answer");
+  }
+  function preqSheet(section, page) {
+    const { item, index } = page;
+    const pending = pendingChecks(item);
+    const list = el("ol", { class: "preq-list" }, pending.map((q) => el("li", { class: "preq-q" }, [
+      el("div", { class: "preq-meta" }, [
+        el("span", { class: "type-tab", text: TYPE_NAME[q.type] }),
+        el("span", { class: "muted small", text: checkLabel(section, index, item.checks.indexOf(q), item.checks.length) }),
+        el("button", { class: "exclude-btn", type: "button", text: "この問題はもう出さない", onclick: () => { setExcluded(q.id, true); showToast("この問題は今後出しません。⚙ 設定から戻せます。"); renderPage(); } }),
+      ]),
+      el("div", { class: "q-prompt", html: q.prompt }),
+      q.code ? el("pre", {}, [el("code", { text: q.code })]) : null,
+    ])));
+    return el("section", { class: "page preq", "aria-label": "予告問題" }, [
+      pageHead("予告問題", `項目 ${index + 1} / ${section.items.length}`),
+      el("h2", {}, [el("span", { class: "no", text: String(index + 1) }), item.kind === "example" ? "例題" : item.title]),
+      el("p", { class: "preq-lead", text: `読む前に、この項目で答える問い（${pending.length} 問）を確認しましょう。答えは、このあと開く見開きの左ページにあります。答えを探しながら読んでください。` }),
+      list,
+      el("div", { class: "acts" }, [el("button", { class: "btn go", type: "button", onclick: () => setStep(item, "read") }, ["確認したので読む", el("kbd", { text: "Enter" })])]),
+    ]);
   }
   function pageName(page) {
     if (page.kind === "open") return "扉";
@@ -1458,7 +1526,18 @@ main { padding: 28px 20px 70px; }
     left.append(isExample ? el("div", { class: "example" }, [el("div", { class: "example-head" }, [el("b", { html: item.title })]), body]) : body);
 
     right.append(pageHead("問題集", item.checks.length ? `項目 ${index + 1} の問題 ${item.checks.length} 問` : "問題なし"));
-    if (item.checks.length) right.append(...checkBoxes(section, item, index));
+    const step = stepOf(item);
+    if (step === "read") {
+      // 読んでいるあいだは問題を見せない（予告問題で見た問いを思い出しながら読む）
+      right.append(el("div", { class: "check reading" }, [
+        el("p", { class: "reading-lead", text: `予告問題の問い（${pendingChecks(item).length} 問）を思い出しながら、左ページを読んでください。` }),
+        el("p", { class: "muted small", style: "margin:0", text: "読み終えたら、問題を出します。" }),
+        el("div", { class: "acts" }, [
+          el("button", { class: "link-btn", type: "button", text: "問いをもう一度見る", onclick: () => setStep(item, "preq") }),
+          el("button", { class: "btn go", type: "button", onclick: () => setStep(item, "answer") }, ["読んだので答える", el("kbd", { text: "Enter" })]),
+        ]),
+      ]));
+    } else if (item.checks.length) right.append(...checkBoxes(section, item, index));
     else right.append(el("div", { class: "check compact" }, [
       el("p", { class: "q-note", style: "margin:0", text: "この項目の問題は、不要として削除しました。読み終えたら次のページへ進んでください。" }),
       el("div", { class: "acts" }, [el("button", { class: "btn go", type: "button", text: "次のページへ ›", onclick: () => turnPage(lesson.page + 1) })]),
@@ -1492,6 +1571,8 @@ main { padding: 28px 20px 70px; }
       card.next = chain[i + 1] || null;
       if (i === 0) { lesson.card = card.api; keyTarget = card.api; }
     });
+    // 「読んだので答える」のあとに開くので、1問目はすぐ答えの欄を出す（2問目からは前の問題に答えると出る）
+    if (chain.length) setTimeout(() => chain[0].api.reveal(), 0);
     return boxes;
   }
   // 予告問題の続き：答え終えたら、次のまだ答えていない問題の答えの欄を出す
@@ -1544,11 +1625,10 @@ main { padding: 28px 20px 70px; }
     // まだ答えていない問題：最後の1問だけ「次のページへ」を出し、それ以外は答えたら次の問題へ
     const remaining = item.checks.slice(k + 1).some((x) => { const rx = recOf(x.id); return !rx.everCorrect && rx.status !== "excluded" && !lesson.wrong[x.id]; });
     const link = { id, api: null, next: null };
-    const first = chain.length === 0;
     link.api = questionCard(id, {
       record: true,
       preview: true,
-      previewButton: first,
+      previewButton: false,
       label: label(),
       retryNote: "次のページで、もう一度出します",
       nextLabel: remaining ? "次の問題へ" : "次のページへ",
