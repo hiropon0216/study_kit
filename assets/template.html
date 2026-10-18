@@ -198,6 +198,16 @@ main { padding: 28px 20px 70px; }
 .preq-meta .exclude-btn { margin-left: auto; }
 .preq-q .type-tab { font-size: 0.72rem; font-weight: 700; padding: 0 10px; border-radius: 99px; border: 2px solid var(--ink); background: var(--surface); }
 .preq-q .q-prompt { font-size: 1.1rem; }
+/* 予告問題の予想（記録しない・正誤を出さない） */
+.guess { margin-top: 12px; }
+.guess-label { font-size: 0.78rem; font-weight: 700; color: var(--primary-dark); margin: 0 0 6px; }
+.guess-opts { display: flex; flex-wrap: wrap; gap: 8px; }
+.guess-opts button { font: inherit; font-size: 0.9rem; font-weight: 700; text-align: left; padding: 6px 12px; border: 2px solid var(--ink); border-radius: 10px; background: var(--surface); box-shadow: 2px 2px 0 var(--ink); }
+.guess-opts button.picked { background: var(--yellow); }
+.guess-opts.ox button { min-width: 64px; text-align: center; font-size: 1.2rem; }
+.guess input { width: min(260px, 100%); background: var(--surface); border: 2px solid var(--ink); border-radius: 10px; padding: 6px 12px; font-size: 1rem; font-family: var(--mono); }
+.guess input.picked { background: var(--yellow-soft); }
+.guess-note { font-size: 0.85rem; margin: 8px 0 0; padding: 6px 10px; border-radius: 10px; border: 1.5px dashed var(--ink); background: var(--surface); }
 .check.reading { border-style: dashed; box-shadow: none; background: var(--surface-2); }
 .reading-lead { font-weight: 700; margin: 0 0 6px; }
 .gutter { background: linear-gradient(90deg, #e3e6ef, #c9cede 50%, #e3e6ef); border-left: 2px solid var(--ink); border-right: 2px solid var(--ink); }
@@ -211,6 +221,14 @@ main { padding: 28px 20px 70px; }
 .example { border: 2px solid var(--ink); border-radius: var(--radius); background: var(--surface); box-shadow: var(--shadow); padding: 22px 20px 14px; margin: 16px 0 0; position: relative; }
 .example::before { content: "例題"; position: absolute; top: -13px; left: 16px; font-size: 0.75rem; font-weight: 700; padding: 1px 12px; border-radius: 99px; background: var(--ink); color: #fff; }
 .example-head b { font-size: 1rem; }
+.example.faded::before { content: "穴あき例題"; background: var(--primary); }
+/* 穴あき例題の伏せた段（自分で考えてから開く） */
+.blank-btn { display: block; width: 100%; text-align: left; font: inherit; font-weight: 700; font-size: 0.9rem; color: var(--primary-dark); padding: 12px 14px; border: 2px dashed var(--primary); border-radius: 10px; background: repeating-linear-gradient(135deg, var(--lavender) 0 8px, var(--primary-soft) 8px 16px); cursor: pointer; }
+.blank-btn:hover, .blank-btn:focus-visible { outline: 2px solid var(--primary); outline-offset: 1px; }
+/* まぎらわしい項目との見比べ */
+.confuse { margin-top: 22px; border: 2px solid var(--ink); border-radius: 12px; background: var(--yellow-soft); padding: 10px 14px; font-size: 0.9rem; }
+.confuse b { display: block; margin-bottom: 4px; }
+.confuse p { margin: 4px 0 0; }
 .sources { margin-top: 26px; padding-top: 14px; border-top: 2px dashed var(--line); font-size: 0.85rem; }
 .sources summary { cursor: pointer; font-weight: 700; }
 .sources ul { padding-left: 0; list-style: none; }
@@ -558,7 +576,7 @@ main { padding: 28px 20px 70px; }
       chapterBySectionId.set(section.id, chapter);
       let textNo = 0;
       for (const item of section.items) {
-        item.kind = item.type === "example" ? "example" : "text";
+        item.kind = item.type === "example" || item.type === "faded" ? item.type : "text";
         item.no = item.kind === "text" ? ++textNo : null;
         // 項目の問題は checks（1問以上。重要な項目ほど多い）。1問だけの旧形式 check も読む。問題を削除した項目は空（説明だけのページ）
         item.checks = (Array.isArray(item.checks) ? item.checks : item.check ? [item.check] : []).filter(Boolean);
@@ -571,13 +589,23 @@ main { padding: 28px 20px 70px; }
   const orderedSections = chapters.flatMap((chapter) => chapter.sections);
   const allIds = [...questionById.keys()];
 
+  // 言い換え問題（variants）：同じ知識を別の問いで問う版。履歴は元の問題のIDで持ち、日を変えて出すたびに前回と違う版を出す
+  const formsOf = (id) => { const q = questionById.get(id); return [q, ...(Array.isArray(q.variants) ? q.variants : [])]; };
+  // まぎらわしい項目の組（confusables）：項目（節ID#項目ID）→ その項目を含む組
+  const confusableGroups = (content.confusables || []).filter((g) => g && Array.isArray(g.items) && g.items.length >= 2);
+  const groupsByItem = new Map();
+  for (const group of confusableGroups) for (const key of group.items) groupsByItem.set(key, [...(groupsByItem.get(key) || []), group]);
+
   const chapterNo = (chapter) => chapters.indexOf(chapter) + 1;
   function sectionCode(section) {
     const chapter = chapterBySectionId.get(section.id);
     return `${chapterNo(chapter)}-${chapter.sections.indexOf(section) + 1}`;
   }
   const chapterLabel = (chapter) => `第${chapterNo(chapter)}章 ${chapter.title}`;
-  const itemLabel = (item) => (item.kind === "example" ? "例題" : `${item.no}. ${item.title}`);
+  // 例題（example）と穴あき例題（faded）は、見出しに問題文が入るので種類名で呼ぶ
+  const KIND_NAME = { example: "例題", faded: "穴あき例題" };
+  const isWorked = (item) => item.kind !== "text";
+  const itemLabel = (item) => (isWorked(item) ? KIND_NAME[item.kind] : `${item.no}. ${item.title}`);
   function parseRef(ref) {
     const [sectionId, itemId] = String(ref).split("#");
     const section = sectionById.get(sectionId);
@@ -688,11 +716,12 @@ main { padding: 28px 20px 70px; }
     return ratio <= personalFactor() ? "good" : "hard";
   }
   // クローズまでの道筋：初回に速く正解 → 翌日もう一度正解でクローズ（2回）。それ以外は日を変えて3回正解（間隔 1日 → 3日）
-  function applyResult(id, grade) {
+  function applyResult(id, grade, form = 0) {
     const r = { ...recOf(id) };
     const d = today();
     r.attempts = (r.attempts || 0) + 1;
     r.lastAnswered = d;
+    if (formsOf(id).length > 1) r.form = form;
     progress.stats.answered += 1;
     if (grade !== "again") { progress.stats.correct += 1; r.everCorrect = true; }
     if (r.status === "excluded") { progress.questions[id] = r; saveProgress(); return r; }
@@ -732,6 +761,50 @@ main { padding: 28px 20px 70px; }
     if (!on && r.status === "excluded") { r.status = r.prevStatus || "new"; delete r.prevStatus; }
     progress.questions[id] = r;
     saveProgress();
+  }
+  // どの版を出すか：初回は元の問題。同じ日のくり返しは前回と同じ版、日を変えたら次の版（練習は元の問題、模擬試験は無作為）
+  function formIndexOf(id, opts = {}) {
+    const n = formsOf(id).length;
+    if (n === 1 || opts.practice) return 0;
+    if (opts.mock) return Math.floor(Math.random() * n);
+    const r = recOf(id);
+    if (!r.attempts) return 0;
+    const last = Math.min(r.form || 0, n - 1);
+    return r.lastAnswered === today() ? last : (last + 1) % n;
+  }
+  const formOf = (id, opts) => formsOf(id)[formIndexOf(id, opts)];
+
+  // まぎらわしい項目：問題が属する項目（すぐ確認は置かれた項目、演習は refs のうち項目まで指すもの）の組
+  function itemKeysOf(id) {
+    const info = checkInfo.get(id);
+    if (info) return [`${info.section.id}#${info.item.id}`];
+    return (questionById.get(id).refs || []).filter((ref) => String(ref).includes("#"));
+  }
+  const groupsOf = (id) => [...new Set(itemKeysOf(id).flatMap((key) => groupsByItem.get(key) || []))];
+  const checksAt = (key) => { const t = parseRef(key); return t && t.item ? t.item.checks.map((q) => q.id) : []; };
+  // 見分けの相手：組のほかの項目の、一度正解した問題（出題日が来たもの → 長く解いていないもの の順）
+  function partnerOf(id, taken) {
+    const own = itemKeysOf(id);
+    for (const group of groupsOf(id)) {
+      const candidates = group.items.filter((key) => !own.includes(key)).flatMap(checksAt)
+        .filter((x) => isActive(x) && recOf(x).everCorrect && !taken.includes(x))
+        .sort((a, b) => (stateOf(b) === "due") - (stateOf(a) === "due") || (recOf(a).lastAnswered || "").localeCompare(recOf(b).lastAnswered || ""));
+      if (candidates.length) return candidates[0];
+    }
+    return null;
+  }
+  // 今日の想起：出題日が来た問題の直後に、まぎらわしい項目の問題を1問ずつ並べる（見分ける練習）
+  function withPartners(ids, pairs) {
+    const out = [];
+    for (const id of ids) {
+      if (out.length >= RUN_SIZE) break;
+      if (out.includes(id)) continue;
+      out.push(id);
+      // 相手が出題日の来た問題なら、後ろから前に寄せる（同じ問題は2回並べない）
+      const partner = out.length < RUN_SIZE ? partnerOf(id, out) : null;
+      if (partner) { out.push(partner); pairs.add(partner); }
+    }
+    return out;
   }
   const dueIds = () => allIds.filter((id) => stateOf(id) === "due");
   // 同じ節が続かないように並べ替える（混ぜて出す）
@@ -901,8 +974,10 @@ main { padding: 28px 20px 70px; }
     if (q.type === "order") return { items: shuffle ? shuffledAvoiding(q.options, q.answer) : q.options.slice() };
     return {};
   }
+  // opts.guess：予告問題で予想した答え（{ text, hit }）。結果の下に、予想が当たっていたかを添える
   function questionCard(id, opts = {}) {
-    const q = questionById.get(id);
+    const form = formIndexOf(id, opts);
+    const q = formsOf(id)[form];
     const view = buildView(q, opts.mock || recOf(id).attempts > 0 || opts.retry);
     const st = { phase: "idle", startedAt: 0, timer: null, advanceTimer: null };
     const root = el("div", { class: "qcard" });
@@ -1002,13 +1077,13 @@ main { padding: 28px 20px 70px; }
       const correct = isAnswerCorrect(q, response);
       const rtMs = performance.now() - st.startedAt;
       lockAnswer(response, correct);
-      if (opts.mock) { if (opts.onDone) opts.onDone({ correct, response }); return; }
+      if (opts.mock) { if (opts.onDone) opts.onDone({ correct, response, form }); return; }
       let grade = correct ? "good" : "again";
       let rec = null;
-      if (opts.record) { grade = gradeOf(q, correct, rtMs, id); rec = applyResult(id, grade); }
+      if (opts.record) { grade = gradeOf(q, correct, rtMs, id); rec = applyResult(id, grade, form); }
       renderHead();
       showResult(correct, grade, rec, response);
-      if (opts.onDone) opts.onDone({ correct, grade, response });
+      if (opts.onDone) opts.onDone({ correct, grade, response, form });
     }
     function lockAnswer(response, correct) {
       const a = area();
@@ -1054,12 +1129,20 @@ main { padding: 28px 20px 70px; }
         const items = view.order.map((i, position) => (notes[i] ? el("li", {}, [el("b", { text: `${KANA[position]} ${q.options[i]}：` }), notes[i]]) : null)).filter(Boolean);
         if (items.length) box.append(el("ul", {}, items));
       }
+      // 間違えたら、まぎらわしい項目との見分け方を出す
+      if (!correct) for (const group of groupsOf(id)) box.append(el("p", { class: "guess-note" }, [el("b", { text: "⇄ 見分けるポイント：" }), el("span", { html: group.note })]));
+      // 読む前の予想と比べる（予想が外れた問いほど、読んだ内容が残りやすい）
+      if (opts.guess) {
+        const g = opts.guess;
+        const verdict = g.hit ? "当たっていました。" : correct ? "外れていましたが、読んで正しく答えられました。" : "外れていました。";
+        box.append(el("p", { class: "guess-note" }, [el("b", { text: "読む前の予想：" }), `「${g.text}」… ${verdict}`]));
+      }
       const sched = scheduleText(rec);
       if (!correct && opts.retryNote) box.append(el("div", {}, [el("span", { class: "sched retry", text: `↻ ${opts.retryNote}` })]));
       else if (sched) box.append(el("div", {}, [el("span", { class: "sched", text: sched })]));
       result.replaceChildren(box);
       if (opts.refs) {
-        for (const ref of (q.refs || []).filter((r) => parseRef(r)).slice(0, 1)) {
+        for (const ref of (q.refs || questionById.get(id).refs || []).filter((r) => parseRef(r)).slice(0, 1)) {
           const target = parseRef(ref);
           result.append(el("div", { class: "goto-line" }, ["教科書で確認する：", el("button", { class: "link-btn", type: "button", text: refLabel(ref), onclick: () => openSection(target.section.id, { itemId: target.item ? target.item.id : null }) })]));
         }
@@ -1099,7 +1182,7 @@ main { padding: 28px 20px 70px; }
     }
     // 画面に入ったときから考える時間を数える（予告問題は「読んだので答える」で始める）
     const api = {
-      el: root, key, start,
+      el: root, key, start, q,
       reveal: () => { if (st.phase === "preview") showAnswerUi(); },
       // 前の問題が出題前に除外されたとき、この問題に「読んだので答える」を付ける
       promote: () => { opts.previewButton = true; if (st.phase === "preview") showPreview(); },
@@ -1166,7 +1249,7 @@ main { padding: 28px 20px 70px; }
       sectionId, page: 0, card: null,
       opening: { own: ownDue, other: otherDue },
       masked: new Set(section.items.filter(itemDone).map((item) => item.id)),
-      revealed: new Set(), retries: {}, retryAt: {}, wrong: {}, steps: {},
+      revealed: new Set(), retries: {}, retryAt: {}, wrong: {}, steps: {}, guesses: {},
     };
     // 扉がなければ1つめの項目から。項目を指定されたら、そのページを開く
     const pages = lessonPages(section);
@@ -1455,30 +1538,67 @@ main { padding: 28px 20px 70px; }
     if (step === "preq") setStep(page.item, "read");
     else if (step === "read") setStep(page.item, "answer");
   }
+  // 予告問題：問いを見て、読む前に答えを予想する（記録しない・正誤も出さない）。予想は読んで答えたあとに見比べる
   function preqSheet(section, page) {
     const { item, index } = page;
     const pending = pendingChecks(item);
-    const list = el("ol", { class: "preq-list" }, pending.map((q) => el("li", { class: "preq-q" }, [
-      el("div", { class: "preq-meta" }, [
-        el("span", { class: "type-tab", text: TYPE_NAME[q.type] }),
-        el("span", { class: "muted small", text: checkLabel(section, index, item.checks.indexOf(q), item.checks.length) }),
-        el("button", { class: "exclude-btn", type: "button", text: "この問題はもう出さない", onclick: () => { setExcluded(q.id, true); showToast("この問題は今後出しません。⚙ 設定から戻せます。"); renderPage(); } }),
-      ]),
-      el("div", { class: "q-prompt", html: q.prompt }),
-      q.code ? el("pre", {}, [el("code", { text: q.code })]) : null,
-    ])));
+    const go = el("button", { class: "btn go", type: "button", onclick: () => setStep(item, "read") });
+    const updateGo = () => {
+      const all = pending.every((base) => lesson.guesses[base.id] || formOf(base.id).type === "order");
+      go.replaceChildren(all ? "予想したので読む" : "予想せずに読む", el("kbd", { text: "Enter" }));
+    };
+    const list = el("ol", { class: "preq-list" }, pending.map((base) => {
+      const q = formOf(base.id);
+      return el("li", { class: "preq-q" }, [
+        el("div", { class: "preq-meta" }, [
+          el("span", { class: "type-tab", text: TYPE_NAME[q.type] }),
+          el("span", { class: "muted small", text: checkLabel(section, index, item.checks.indexOf(base), item.checks.length) }),
+          el("button", { class: "exclude-btn", type: "button", text: "この問題はもう出さない", onclick: () => { setExcluded(base.id, true); showToast("この問題は今後出しません。⚙ 設定から戻せます。"); renderPage(); } }),
+        ]),
+        el("div", { class: "q-prompt", html: q.prompt }),
+        q.code ? el("pre", {}, [el("code", { text: q.code })]) : null,
+        guessBox(base.id, q, updateGo),
+      ]);
+    }));
+    updateGo();
     return el("section", { class: "page preq", "aria-label": "予告問題" }, [
       pageHead("予告問題", `項目 ${index + 1} / ${section.items.length}`),
-      el("h2", {}, [el("span", { class: "no", text: String(index + 1) }), item.kind === "example" ? "例題" : item.title]),
-      el("p", { class: "preq-lead", text: `読む前に、この項目で答える問い（${pending.length} 問）を確認しましょう。答えは、このあと開く見開きの左ページにあります。答えを探しながら読んでください。` }),
+      el("h2", {}, [el("span", { class: "no", text: String(index + 1) }), isWorked(item) ? KIND_NAME[item.kind] : item.title]),
+      el("p", { class: "preq-lead", text: `読む前に、この項目で答える問い（${pending.length} 問）の答えを予想してください。記録はしないので、外れてかまいません（予想して外れた問いほど、読んだ内容が残りやすくなります）。答えは、このあと開く見開きの左ページにあります。` }),
       list,
-      el("div", { class: "acts" }, [el("button", { class: "btn go", type: "button", onclick: () => setStep(item, "read") }, ["確認したので読む", el("kbd", { text: "Enter" })])]),
+      el("div", { class: "acts" }, [go]),
     ]);
+  }
+  // 予想の欄：選択式は選択肢、○×は ○ と ×、穴埋めは入力欄。並べ替えは読んでから答える
+  function guessBox(id, q, onChange) {
+    const pick = (response, text) => { lesson.guesses[id] = { text, hit: isAnswerCorrect(q, response) }; onChange(); };
+    const picked = lesson.guesses[id];
+    if (q.type === "choice" || q.type === "predict" || q.type === "truefalse") {
+      const options = q.type === "truefalse" ? [[true, "○"], [false, "×"]] : q.options.map((text, i) => [i, text]);
+      const row = el("div", { class: `guess-opts${q.type === "truefalse" ? " ox" : ""}` });
+      row.append(...options.map(([value, text]) => el("button", { type: "button", class: picked && picked.text === text ? "picked" : "", text, onclick: (e) => {
+        row.querySelectorAll("button").forEach((b) => b.classList.remove("picked"));
+        e.currentTarget.classList.add("picked");
+        pick(value, text);
+      } })));
+      return el("div", { class: "guess" }, [el("p", { class: "guess-label", text: "予想（記録しません）" }), row]);
+    }
+    if (q.type === "fill") {
+      const input = el("input", { type: "text", placeholder: "予想を入力", "aria-label": "予想", autocomplete: "off", spellcheck: "false", class: picked ? "picked" : "" });
+      if (picked) input.value = picked.text;
+      input.addEventListener("input", () => {
+        const text = input.value.trim();
+        if (text) pick(text, text); else { delete lesson.guesses[id]; onChange(); }
+        input.classList.toggle("picked", Boolean(text));
+      });
+      return el("div", { class: "guess" }, [el("p", { class: "guess-label", text: "予想（記録しません）" }), input, q.unit ? ` ${q.unit}` : null]);
+    }
+    return el("p", { class: "guess-label", text: "並べ替えの問題は、読んでから答えます。" });
   }
   function pageName(page) {
     if (page.kind === "open") return "扉";
     if (page.kind === "end") return "まとめ";
-    return page.item.kind === "example" ? "例題" : `項目 ${page.index + 1}`;
+    return isWorked(page.item) ? KIND_NAME[page.item.kind] : `項目 ${page.index + 1}`;
   }
   function pageHead(tag, note) {
     return el("div", { class: "page-head" }, [el("span", { class: "page-tag", text: tag }), el("span", { text: note })]);
@@ -1491,7 +1611,7 @@ main { padding: 28px 20px 70px; }
     left.append(
       pageHead("教科書", "扉"),
       el("h2", { text: "この節で学ぶこと" }),
-      el("ol", { class: "cover-list" }, section.items.map((item, i) => el("li", {}, [el("button", { class: "link-btn", type: "button", text: item.kind === "example" ? `例題：${stripTags(item.title)}` : item.title, onclick: () => turnPage(offset + i) })]))),
+      el("ol", { class: "cover-list" }, section.items.map((item, i) => el("li", {}, [el("button", { class: "link-btn", type: "button", text: isWorked(item) ? `${KIND_NAME[item.kind]}：${stripTags(item.title)}` : item.title, onclick: () => turnPage(offset + i) })]))),
       prereqs.length ? el("p", { class: "muted small" }, ["前提： ", ...prereqs.map((p) => el("button", { class: "link-btn", type: "button", text: `${sectionCode(p)} ${p.title}`, onclick: () => openSection(p.id) }))]) : null,
     );
     right.append(pageHead("問題集", "読む前に思い出す"));
@@ -1501,7 +1621,7 @@ main { padding: 28px 20px 70px; }
       right.append(el("div", { class: "check warmup" }, [
         el("div", { class: "check-head" }, [el("span", { class: "check-badge", text: title }), el("span", { class: "note", text: `${ids.length} 問 ・ 出題日が来た問題` })]),
         ...ids.map((id) => el("div", { class: "subcard" }, [
-          el("span", { class: "type-tab", text: TYPE_NAME[questionById.get(id).type] }),
+          el("span", { class: "type-tab", text: TYPE_NAME[formOf(id).type] }),
           questionCard(id, { record: true, label: el("span", { text: scopeLabel(id) }), onDone: () => updateLessonStatus() }).el,
         ])),
       ]));
@@ -1512,25 +1632,41 @@ main { padding: 28px 20px 70px; }
   // 項目のページ：左に説明（2回目は伏せ字）、右にその項目の問題（予告問題）と、前のページで間違えた問題
   function fillItemPage(section, page, left, right) {
     const { item, index } = page;
-    const isExample = item.kind === "example";
+    const isExample = isWorked(item);
     const body = el("div", { class: "lesson-body", html: item.body });
     const masks = lesson.masked.has(item.id) ? maskKeywords(body, item.id) : 0;
+    const blanks = item.kind === "faded" ? blankSteps(body, item.id) : 0;
     left.append(pageHead("教科書", `項目 ${index + 1} / ${section.items.length}`));
+    if (blanks) {
+      left.append(el("div", { class: "mask-bar" }, [
+        el("span", { text: `穴あき例題です。伏せた段（${blanks} か所）は、前の例題を思い出しながら自分で考えてから押して開いてください。` }),
+      ]));
+    }
     if (masks) {
       left.append(el("div", { class: "mask-bar" }, [
         el("span", { text: `一度正解した項目です。キーワード ${masks} か所を伏せています。思い出してから押すと開きます。` }),
         el("button", { class: "link-btn", type: "button", text: "すべて開く", onclick: () => { left.querySelectorAll(".mask").forEach((m) => m.click()); } }),
       ]));
     }
-    left.append(el("h2", { id: `head-${item.id}` }, [el("span", { class: "no", text: String(index + 1) }), isExample ? "例題" : item.title]));
-    left.append(isExample ? el("div", { class: "example" }, [el("div", { class: "example-head" }, [el("b", { html: item.title })]), body]) : body);
+    left.append(el("h2", { id: `head-${item.id}` }, [el("span", { class: "no", text: String(index + 1) }), isExample ? KIND_NAME[item.kind] : item.title]));
+    left.append(isExample ? el("div", { class: `example${item.kind === "faded" ? " faded" : ""}` }, [el("div", { class: "example-head" }, [el("b", { html: item.title })]), body]) : body);
+    // まぎらわしい項目があれば、見比べるよう促す
+    for (const group of groupsByItem.get(`${section.id}#${item.id}`) || []) {
+      const others = group.items.filter((key) => key !== `${section.id}#${item.id}`).filter((key) => parseRef(key) && parseRef(key).item);
+      if (!others.length) continue;
+      left.append(el("div", { class: "confuse" }, [
+        el("b", { text: "⇄ まぎらわしいので見比べよう" }),
+        el("div", {}, others.map((key) => { const t = parseRef(key); return el("button", { class: "link-btn", type: "button", text: refLabel(key), onclick: () => (t.section === section ? turnPage(lessonPages(section).findIndex((p) => p.kind === "item" && p.item === t.item)) : openSection(t.section.id, { itemId: t.item.id })) }); })),
+        el("p", { html: group.note }),
+      ]));
+    }
 
     right.append(pageHead("問題集", item.checks.length ? `項目 ${index + 1} の問題 ${item.checks.length} 問` : "問題なし"));
     const step = stepOf(item);
     if (step === "read") {
       // 読んでいるあいだは問題を見せない（予告問題で見た問いを思い出しながら読む）
       right.append(el("div", { class: "check reading" }, [
-        el("p", { class: "reading-lead", text: `予告問題の問い（${pendingChecks(item).length} 問）を思い出しながら、左ページを読んでください。` }),
+        el("p", { class: "reading-lead", text: `予告問題の問い（${pendingChecks(item).length} 問）と自分の予想を思い出し、合っているか確かめながら左ページを読んでください。` }),
         el("p", { class: "muted small", style: "margin:0", text: "読み終えたら、問題を出します。" }),
         el("div", { class: "acts" }, [
           el("button", { class: "link-btn", type: "button", text: "問いをもう一度見る", onclick: () => setStep(item, "preq") }),
@@ -1561,6 +1697,20 @@ main { padding: 28px 20px 70px; }
       masked++;
     }
     return masked;
+  }
+  // 穴あき例題：sk-steps の中の li.sk-blank を伏せる。毎回伏せ、自分で考えてから押すと開く（節を開いているあいだは開いたまま）
+  function blankSteps(body, itemId) {
+    let blanked = 0;
+    [...body.querySelectorAll(".sk-steps > li.sk-blank")].forEach((li, n) => {
+      const key = `${itemId}:blank:${n}`;
+      if (lesson.revealed.has(key)) return;
+      const original = [...li.childNodes];
+      const button = el("button", { class: "blank-btn", type: "button", text: "？ この段を自分で考えてから、押して開く" });
+      button.addEventListener("click", () => { lesson.revealed.add(key); li.replaceChildren(...original); });
+      li.replaceChildren(button);
+      blanked++;
+    });
+    return blanked;
   }
   // 問題集の問題：まだ正解していない問題は、読む前に問いだけ見せる（予告問題）
   // 1項目に問題が複数あるときは、問いをすべて先に見せ、「読んだので答える」のあと上から順に答える
@@ -1598,7 +1748,7 @@ main { padding: 28px 20px 70px; }
     const id = q.id;
     const label = () => el("span", { text: checkLabel(section, index, k, item.checks.length) });
     const box = el("div", { class: "check", id: `chk-${id}` }, [
-      el("div", { class: "check-head" }, [el("span", { class: "check-badge", text: `${item.kind === "example" ? "類題" : "問題"} ・ ${TYPE_NAME[q.type]}` })]),
+      el("div", { class: "check-head" }, [el("span", { class: "check-badge", text: `${isWorked(item) ? "類題" : "問題"} ・ ${TYPE_NAME[formOf(id).type]}` })]),
     ]);
     const r = recOf(id);
     if (r.everCorrect || r.status === "excluded") {
@@ -1629,6 +1779,7 @@ main { padding: 28px 20px 70px; }
       record: true,
       preview: true,
       previewButton: false,
+      guess: lesson.guesses[id],
       label: label(),
       retryNote: "次のページで、もう一度出します",
       nextLabel: remaining ? "次の問題へ" : "次のページへ",
@@ -1760,7 +1911,7 @@ main { padding: 28px 20px 70px; }
       }));
       document.getElementById("side-map").replaceChildren(...section.items.map((item, i) => el("button", { type: "button", onclick: () => turnPage(offset + i) }, [
         el("span", { class: "num", text: String(i + 1) }),
-        el("span", { text: item.kind === "example" ? "例題" : item.title }),
+        el("span", { text: isWorked(item) ? KIND_NAME[item.kind] : item.title }),
         !item.checks.length ? el("span", { class: "muted small", text: "問題なし" })
           : item.checks.length === 1 ? stateTag(item.checks[0].id)
           : el("span", { class: "qs", text: `正解 ${item.checks.filter((q) => recOf(q.id).everCorrect).length} / ${item.checks.length}` }),
@@ -1780,13 +1931,14 @@ main { padding: 28px 20px 70px; }
       const list = questions.map((q) => q.id).filter(isActive);
       return [...list.filter((id) => stateOf(id) === "new"), ...sortDue(list.filter((id) => stateOf(id) === "due"))].slice(0, RUN_SIZE);
     };
-    if (kind === "today") { ids = interleave(sortDue(dueIds())).slice(0, RUN_SIZE); title = "今日の想起"; label = "もう一度確かめる日が来た問題"; }
+    const pairs = new Set(); // まぎらわしい項目から見分けのために並べた問題
+    if (kind === "today") { ids = withPartners(interleave(sortDue(dueIds())), pairs); title = "今日の想起"; label = "もう一度確かめる日が来た問題"; }
     else if (kind === "chapter") { ids = pickDrill(chapter.exercise || []); title = "章末演習"; label = chapterLabel(chapter); }
     else if (kind === "final") { ids = pickDrill(finalExam); title = "総合演習"; label = "章をまたいだ問題"; }
     else { ids = shuffled([...drillChapter.keys()].filter(isActive)).slice(0, content.meta.exam.questionCount); title = "模擬試験"; label = `${content.meta.exam.minutes}分`; }
     if (!ids.length) { showToast(kind === "today" ? "今日解く問題はありません。" : "いま出す問題はありません。まだ覚えていない問題は、出題日が来たら「今日の想起」に出ます。"); return; }
     const backSection = currentView === "lesson" && lesson ? lesson.sectionId : null;
-    run = { kind, chapterId, title, label, backSection, queue: ids.slice(), retries: {}, log: [], current: null, startedAt: Date.now(), finished: false, celebrated: false, total: ids.length };
+    run = { kind, chapterId, title, label, backSection, pairs, queue: ids.slice(), retries: {}, log: [], current: null, startedAt: Date.now(), finished: false, celebrated: false, total: ids.length };
     confettiPieces = [];
     currentView = "run";
     advanceRun(true);
@@ -1835,10 +1987,10 @@ main { padding: 28px 20px 70px; }
     const isRetry = (run.retries[id] || 0) > 0;
     const card = questionCard(id, {
       record: !isMock, mock: isMock, retry: isRetry, startNow: true, focus: true, refs: true, autoAdvance: true,
-      label: el("span", { text: `${isRetry ? "↻ もう一度 ・ " : ""}${scopeLabel(id)}` }),
+      label: el("span", { text: `${isRetry ? "↻ もう一度 ・ " : run.pairs.has(id) ? "⇄ 見分け ・ " : ""}${scopeLabel(id)}` }),
       retryNote: isMock ? null : "このあと、もう一度出します。",
       onDone: (res) => {
-        run.log.push({ id, correct: res.correct, response: res.response, retry: isRetry });
+        run.log.push({ id, correct: res.correct, response: res.response, retry: isRetry, form: res.form });
         if (isMock) { advanceRun(); return; }
         // 間違えた問題は、3問あとにもう一度出す（同じ回で3回まで）
         if (!res.correct && (run.retries[id] || 0) < MAX_RETRY) {
@@ -1852,7 +2004,7 @@ main { padding: 28px 20px 70px; }
     });
     run.card = card;
     keyTarget = card;
-    const q = questionById.get(id);
+    const q = card.q;
     const hint = isMock ? "答えると次の問題へ進みます" : q.type === "fill" ? "入力欄には自動でカーソルが入ります ・ Enter で答え合わせ・次へ" : "選択肢は数字キーでも選べます ・ Enter で次へ";
     return el("div", { style: "min-width:0" }, [
       el("section", { class: "panel card", id: "run-card" }, [el("span", { class: "type-tab", text: TYPE_NAME[q.type] }), card.el]),
@@ -1903,7 +2055,7 @@ main { padding: 28px 20px 70px; }
     children.push(el("div", { class: "btn-row", style: "justify-content:center;margin-top:16px" }, buttons));
     if (isMock) {
       for (const entry of run.log.filter((e) => !e.correct)) {
-        const q = questionById.get(entry.id);
+        const q = formsOf(entry.id)[entry.form || 0];
         children.push(el("div", { class: "miss" }, [
           el("div", { html: q.type === "truefalse" ? `「${q.prompt}」` : q.prompt }),
           el("p", {}, [el("b", { text: "正解：" }), el("span", { style: "white-space:pre-line", text: correctAnswerText(q, null) })]),

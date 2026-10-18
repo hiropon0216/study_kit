@@ -14,15 +14,15 @@
 | F-006 | kubectl rollout undo で Deployment を前のリビジョンに戻せる | https://kubernetes.io/docs/concepts/workloads/controllers/deployment/ | S | 第1章 Kubernetes の基本オブジェクト ／ 1-2 Deployment と ReplicaSet |
 | F-007 | Pod の phase は Pending・Running・Succeeded・Failed・Unknown の5つ | https://kubernetes.io/docs/concepts/workloads/pods/pod-lifecycle/ | S | 第2章 Pod のトラブルシューティング ／ 2-1 Pod の状態を読む |
 | F-008 | Pending はクラスタに受け入れられたがコンテナがまだ動く状態にない phase で、スケジュール待ちやイメージのダウンロード中を含む | https://kubernetes.io/docs/concepts/workloads/pods/pod-lifecycle/ | S | 第2章 Pod のトラブルシューティング ／ 2-1 Pod の状態を読む |
-| F-009 | CrashLoopBackOff は phase ではなく、コンテナが起動と異常終了を繰り返し、kubelet が待ち時間を延ばしながら再起動している状態 | https://kubernetes.io/docs/concepts/workloads/pods/pod-lifecycle/ | S | 第2章 Pod のトラブルシューティング ／ 2-1 Pod の状態を読む |
-| F-010 | イメージを取得できないとき、Pod は ImagePullBackOff になり取得を再試行する。イメージ名の誤りや非公開レジストリの認証情報不足などで起こる | https://kubernetes.io/docs/concepts/containers/images/ | S | 第2章 Pod のトラブルシューティング ／ 2-1 Pod の状態を読む |
+| F-009 | CrashLoopBackOff は phase ではなく、コンテナが起動と異常終了を繰り返し、kubelet が待ち時間を延ばしながら再起動している状態 | https://kubernetes.io/docs/concepts/workloads/pods/pod-lifecycle/ | S | 第2章 Pod のトラブルシューティング ／ 2-1 Pod の状態を読む<br>第2章 Pod のトラブルシューティング ／ 2-2 describe と logs で原因を探す |
+| F-010 | イメージを取得できないとき、Pod は ImagePullBackOff になり取得を再試行する。イメージ名の誤りや非公開レジストリの認証情報不足などで起こる | https://kubernetes.io/docs/concepts/containers/images/ | S | 第2章 Pod のトラブルシューティング ／ 2-1 Pod の状態を読む<br>第2章 Pod のトラブルシューティング ／ 2-2 describe と logs で原因を探す |
 | F-011 | kubectl describe pod は Pod の詳細と Events を表示する。Pending のまま進まない Pod は、スケジューラのメッセージを Events で確認する | https://kubernetes.io/docs/tasks/debug/debug-application/debug-pods/ | S | 第2章 Pod のトラブルシューティング ／ 2-2 describe と logs で原因を探す |
 | F-012 | Pending のまま進まない Pod の多くは、CPU やメモリの不足でノードに割り当てられていない | https://kubernetes.io/docs/tasks/debug/debug-application/debug-pods/ | S | 第2章 Pod のトラブルシューティング ／ 2-2 describe と logs で原因を探す |
 | F-013 | kubectl logs の --previous（-p）は、前回終了したコンテナのログを表示する | https://kubernetes.io/docs/reference/kubectl/generated/kubectl_logs/ | S | 第2章 Pod のトラブルシューティング ／ 2-2 describe と logs で原因を探す |
 | F-014 | kubectl get pods で Pod の一覧と状態を表示できる | https://kubernetes.io/docs/reference/kubectl/quick-reference/ | S | 第2章 Pod のトラブルシューティング ／ 2-1 Pod の状態を読む |
 | F-015 | kubectl rollout status で Deployment のロールアウトの状況を確認できる | https://kubernetes.io/docs/concepts/workloads/controllers/deployment/ | S | 第1章 Kubernetes の基本オブジェクト ／ 1-2 Deployment と ReplicaSet |
 | F-016 | phase の意味：Running は少なくとも1つのコンテナが動いている、Succeeded はすべてのコンテナが正常終了し再起動しない、Failed はすべてのコンテナが終了し少なくとも1つが失敗、Unknown は状態を取得できない | https://kubernetes.io/docs/concepts/workloads/pods/pod-lifecycle/ | S | 第2章 Pod のトラブルシューティング ／ 2-1 Pod の状態を読む |
-| F-017 | kubectl get pods の RESTARTS 列はコンテナの再起動回数を示す | https://kubernetes.io/docs/tasks/debug/debug-application/debug-pods/ | S | 第2章 Pod のトラブルシューティング ／ 2-1 Pod の状態を読む |
+| F-017 | kubectl get pods の RESTARTS 列はコンテナの再起動回数を示す | https://kubernetes.io/docs/tasks/debug/debug-application/debug-pods/ | S | 第2章 Pod のトラブルシューティング ／ 2-1 Pod の状態を読む<br>第2章 Pod のトラブルシューティング ／ 2-2 describe と logs で原因を探す |
 | F-018 | コンテナが標準出力・標準エラー出力に書いたログは kubectl logs で見られる | https://kubernetes.io/docs/concepts/cluster-administration/logging/ | S | 第2章 Pod のトラブルシューティング ／ 2-2 describe と logs で原因を探す |
 | F-019 | Kubernetes はコンテナ化されたワークロードとサービスを管理する、ポータブルで拡張可能なオープンソースのプラットフォームである | https://kubernetes.io/docs/concepts/overview/ | S | 第1章 Kubernetes の基本オブジェクト ／ 1-1 Pod |
 | F-020 | Kubernetes は Google が2014年にオープンソース化したプロジェクトで、K8s と略される（K と s の間の8文字を数えた略記） | https://kubernetes.io/docs/concepts/overview/ | S | 第1章 Kubernetes の基本オブジェクト ／ 1-1 Pod |

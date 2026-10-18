@@ -176,7 +176,29 @@
                     "レプリカセット"
                   ],
                   "explanation": "Deployment は ReplicaSet を作り、ReplicaSet が指定数の Pod を維持します。",
-                  "hint": "Deployment と Pod の間に入るオブジェクトです。"
+                  "hint": "Deployment と Pod の間に入るオブジェクトです。",
+                  "variants": [
+                    {
+                      "id": "q-ch1-s2-04-v1",
+                      "type": "choice",
+                      "prompt": "Deployment が作り、指定された数の Pod を維持し続けるのはどれですか。",
+                      "code": null,
+                      "options": [
+                        "ReplicaSet",
+                        "Node",
+                        "kubectl",
+                        "マニフェスト"
+                      ],
+                      "answer": 0,
+                      "explanation": "Deployment は ReplicaSet を作り、ReplicaSet が指定数の Pod を維持します。Deployment → ReplicaSet → Pod の3段です。",
+                      "optionNotes": [
+                        null,
+                        "Node は Pod が動くサーバーです。Pod の数は管理しません。",
+                        "kubectl はクラスタに指示を出すコマンドラインツールです。",
+                        "マニフェストは Deployment などの定義を書いたファイルです。"
+                      ]
+                    }
+                  ]
                 },
                 {
                   "id": "q-ch1-s2-10",
@@ -557,7 +579,18 @@
                     "Succeeded"
                   ],
                   "answer": 2,
-                  "explanation": "phase は Pending、Running、Succeeded、Failed、Unknown の5つです。<code>CrashLoopBackOff</code> は <code>STATUS</code> 列に出る値ですが、phase ではありません。"
+                  "explanation": "phase は Pending、Running、Succeeded、Failed、Unknown の5つです。<code>CrashLoopBackOff</code> は <code>STATUS</code> 列に出る値ですが、phase ではありません。",
+                  "variants": [
+                    {
+                      "id": "q-ch2-s1-01-v1",
+                      "type": "truefalse",
+                      "prompt": "CrashLoopBackOff は、Pod の phase の1つである。",
+                      "code": null,
+                      "options": [],
+                      "answer": false,
+                      "explanation": "phase は Pending、Running、Succeeded、Failed、Unknown の5つです。<code>CrashLoopBackOff</code> は <code>STATUS</code> 列に出る値で、phase ではありません。"
+                    }
+                  ]
                 },
                 {
                   "id": "q-ch2-s1-11",
@@ -594,7 +627,10 @@
             "F-011",
             "F-012",
             "F-013",
-            "F-018"
+            "F-018",
+            "F-009",
+            "F-010",
+            "F-017"
           ],
           "items": [
             {
@@ -721,6 +757,43 @@
                   "options": [],
                   "answer": true,
                   "explanation": "ImagePullBackOff の Pod はコンテナイメージを取得できていないので、コンテナは動いておらず、ログもありません。<code>Events</code> には、どのイメージの取得に失敗したかなど、Pod に起きた出来事が並びます。"
+                }
+              ]
+            },
+            {
+              "id": "i5",
+              "type": "faded",
+              "title": "Pod A は STATUS が ImagePullBackOff、Pod B は STATUS が CrashLoopBackOff で RESTARTS が増え続けています。それぞれ、最初に何を見ればよいですか。",
+              "body": "<ol class=\"sk-steps\"><li><p>Pod A の ImagePullBackOff は、コンテナイメージを取得できず、取得を再試行している状態です。コンテナはまだ動いていません。</p></li><li class=\"sk-blank\"><p>コンテナが動いていないので、ログはまだありません。<code>kubectl describe pod</code> の <code>Events</code> を見て、イメージの取得で何が起きたかを確かめます。</p></li><li><p>Pod B は RESTARTS が増え続けています。コンテナが起動と異常終了を繰り返している CrashLoopBackOff です。</p></li><li class=\"sk-blank\"><p>いま動いているコンテナはすぐ終了してしまうので、前回終了したコンテナのログを <code>kubectl logs --previous</code> で見ます。</p></li></ol>",
+              "checks": [
+                {
+                  "id": "q-ch2-s2-14",
+                  "type": "choice",
+                  "prompt": "STATUS が CrashLoopBackOff の Pod で、異常終了したときのログを見るには、どのコマンドを使いますか。",
+                  "code": null,
+                  "options": [
+                    "kubectl logs <Pod名> --previous",
+                    "kubectl describe pod <Pod名>",
+                    "kubectl get pods",
+                    "kubectl delete pod <Pod名>"
+                  ],
+                  "answer": 0,
+                  "explanation": "CrashLoopBackOff の Pod は、いま動いているコンテナがすぐ終了してしまいます。前回終了したコンテナのログを <code>kubectl logs --previous</code> で見ます。",
+                  "optionNotes": [
+                    null,
+                    "describe の Events は、コンテナが動いていない Pending や ImagePullBackOff のときに見ます。アプリのログは出ません。",
+                    "get pods は一覧と状態を見るコマンドで、ログは出ません。",
+                    "Deployment の Pod は同じひな形から作り直されるので、消しても同じ状態に戻ります。"
+                  ]
+                },
+                {
+                  "id": "q-ch2-s2-15",
+                  "type": "truefalse",
+                  "prompt": "STATUS が CrashLoopBackOff の Pod では、<code>kubectl get pods</code> の RESTARTS の数が増えていく。",
+                  "code": null,
+                  "options": [],
+                  "answer": true,
+                  "explanation": "CrashLoopBackOff は、コンテナが起動と異常終了を繰り返し、kubelet が再起動している状態です。再起動のたびに RESTARTS の数が増えます。"
                 }
               ]
             }
@@ -971,6 +1044,22 @@
         "ch1-s2#i1",
         "ch2-s1#i3"
       ]
+    }
+  ],
+  "confusables": [
+    {
+      "items": [
+        "ch2-s1#i2",
+        "ch2-s1#i3"
+      ],
+      "note": "phase は Pending・Running・Succeeded・Failed・Unknown の5つだけです。CrashLoopBackOff や ImagePullBackOff は <code>STATUS</code> 列に出る値で、phase ではありません。"
+    },
+    {
+      "items": [
+        "ch2-s2#i2",
+        "ch2-s2#i3"
+      ],
+      "note": "コンテナがまだ動いていない（Pending）なら <code>kubectl describe pod</code> の Events、動いては落ちる（CrashLoopBackOff）なら <code>kubectl logs --previous</code> を見ます。"
     }
   ],
   "factsheet": [

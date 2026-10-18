@@ -13,7 +13,21 @@
 4. 図を読み解く地の文。図の中の具体的な値や名前を使って説明する
 5. 必要に応じて `sk-callout`（たとえ・POINT・注意・実務メモ）、コード
 
-例題の項目（`type: "example"`）は、`title` に問題文、`body` に `sk-steps` で解き方を書く。手順の中にも図（`sk-cells` など）を入れてよい。
+例題の項目（`type: "example"`）は、`title` に問題文、`body` に `sk-steps` で解き方を書く。手順の中にも図（`sk-cells` など）を入れてよい。例題の直後の穴あき例題（`type: "faded"`）は、同じ書き方で、伏せる段を `<li class="sk-blank">` にする（下の `sk-steps`）。
+
+### 原理は「具体 → 抽象」の順で説明する
+
+規則・原理・仕組み（「〜のときは〜になる」）を説明する項目は、原理を先に書かない。次の順にする。
+
+1. **具体的な場面を2つ並べる**：見た目は違うが、同じ原理で動いている場面を2つ（`sk-compare` で左右に並べるとよい）。値や名前は具体的に書く
+2. **共通点を問いかける**：「2つに共通するのは何でしょうか」と地の文で投げかけ、図の中で共通する部分を `sk-fill-mark` などで目立たせる
+3. **原理に名前を付ける**：共通点を一般的な言葉でまとめ、ここで初めて用語を出す（`<strong>`）
+4. **当てはまらない場面に触れる**（必要なら）：似ているが原理が当てはまらない場面を `sk-callout warn` で1つ挙げる
+
+具体的な場面は図で見せ、抽象的なまとめは文で書く。最初から抽象的な定義と記号だけで説明しない。
+
+- 根拠：2つの事例を比べさせると、1つずつ学ぶより原理を抜き出しやすく、別の場面に使いやすい（Gentner, D., Loewenstein, J., & Thompson, L. (2003). Learning and transfer: A general role for analogical encoding. *Journal of Educational Psychology*, 95(2), 393–408）。具体から始めて、少しずつ抽象に移すと、両方の利点を得られる（Fyfe, E. R., McNeil, N. M., Son, J. Y., & Goldstone, R. L. (2014). Concreteness fading in mathematics and science instruction: A systematic review. *Educational Psychology Review*, 26(1), 9–25）。どちらも書誌と要旨を確認
+- 用語の定義だけの項目（「Pod とは」）や、手順だけの項目には使わなくてよい
 
 この節の要点は `keyPoints` に書く（右の列に出る）。本文に `sk-goals` や `sk-summary` を置く必要はない。
 
@@ -131,6 +145,19 @@
 ```
 
 `sk-flow`（横に並ぶ手順のカード）は「操作の流れ」、`sk-steps` は「考え方の順序」に使う。
+
+**穴あき例題（`type: "faded"` の項目）では、伏せる段を `<li class="sk-blank">` にする。** 学習エンジンがその段を「？ この段を自分で考えてから、押して開く」に置き換え、学習者が考えてから開く。
+
+```html
+<ol class="sk-steps">
+  <li><p>3バイトは、8ビットのかたまりが3つです。</p></li>
+  <li class="sk-blank"><p>バイト → ビットは「× 8」なので、3 × 8 ＝ <strong>24ビット</strong>。</p></li>
+</ol>
+```
+
+- 伏せるのは、直前の例題で見せた考え方を使う段。最初の段（問題の読み取り）は伏せない
+- 最後の答えの段だけでなく、途中の考え方の段も伏せる。伏せるのは1〜2段にし、すべての段を伏せない
+- `sk-blank` は穴あき例題の中でだけ伏せられる（`validate.py` が警告する）
 
 ### sk-terms：用語カード
 

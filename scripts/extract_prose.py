@@ -90,7 +90,13 @@ def iter_items(content):
 
 
 def iter_questions(content):
-    """すぐ確認 → 章末演習 → 総合演習 の順に問題を返す。"""
+    """すぐ確認 → 章末演習 → 総合演習 の順に問題を返す。言い換え問題（variants）は元の問題の直後に返す。"""
+    for question in _iter_base_questions(content):
+        yield question
+        yield from question.get("variants") or []
+
+
+def _iter_base_questions(content):
     for chapter in content["chapters"]:
         for section in chapter["sections"]:
             for item in section["items"]:

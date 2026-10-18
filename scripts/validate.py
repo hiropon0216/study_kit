@@ -9,6 +9,7 @@
   - 図解の使い忘れ（説明の項目ごとに図や表の部品を1つ以上）
   - 固有名詞の前提の説明（sk-premise）が、その語の初出より後ろに置かれていないか
   - 廃止した問題（retired）が教材に残っていないか、同じ問題文で作り直していないか
+  - 言い換え問題（variants）・穴あき例題（faded）・まぎらわしい項目の組（confusables）の形
 
 使い方:
   python validate.py content.json
@@ -23,7 +24,9 @@ import sys
 from pathlib import Path
 
 QUESTION_TYPES = {"choice", "fill", "order", "predict", "truefalse"}
-ITEM_TYPES = {"text", "example"}
+ITEM_TYPES = {"text", "example", "faded"}
+BLANK_STEP_PATTERN = re.compile(r'<li class="sk-blank"')
+MAX_VARIANTS = 2
 FACT_RANKS = {"S", "A", "B"}
 PURPOSES = {"資格", "実務", "教養"}
 CONTENT_ID_PATTERN = re.compile(r"^[a-z0-9][a-z0-9-]*$")
@@ -142,11 +145,19 @@ def _term_pattern(term):
 
 
 def _question_text(question):
+    """問題の文字列（言い換え問題 variants も含める）。"""
     if not isinstance(question, dict):
         return ""
-    options = question.get("options") or []
-    parts = [question.get("prompt"), question.get("code"), question.get("explanation"), question.get("hint"), *options]
+    parts = []
+    for form in _with_variants(question):
+        parts += [form.get("prompt"), form.get("code"), form.get("explanation"), form.get("hint"), *(form.get("options") or [])]
     return _mask_tags(" ".join(str(part) for part in parts if isinstance(part, str)))
+
+
+def _with_variants(question):
+    """問題と、その言い換え問題（variants）を返す。"""
+    variants = question.get("variants") if isinstance(question, dict) else None
+    return [question] + [v for v in variants if isinstance(v, dict)] if isinstance(variants, list) else [question]
 
 
 def _iter_items(chapters):
@@ -211,6 +222,36 @@ def _check_premises(chapters, final_exam, report):
             if match and (index < text_index or match.start() < position):
                 report.warn(where, f"「{term}」は {text_where} で先に出てきます。前提の説明（sk-premise）は初出の項目の、初出の文より前に置いてください")
                 break
+
+
+def _check_variants(question, where, ref_targets, report, register_id, is_check):
+    """言い換え問題（variants）：同じ知識を別の問いで問う版。日を変えて出すたびに版を替える。"""
+    variants = question.get("variants") if isinstance(question, dict) else None
+    if variants is None:
+        return
+    if not isinstance(variants, list) or not variants:
+        report.error(where, "variants は言い換え問題の配列にしてください（ないときは書きません）")
+        return
+    if len(variants) > MAX_VARIANTS:
+        report.warn(where, f"variants が {len(variants)}個です（{MAX_VARIANTS}個までにします）")
+    base_prompt = _normalize_prompt(TAG_PATTERN.sub("", str(question.get("prompt", ""))))
+    for index, variant in enumerate(variants):
+        variant_where = f"{where} の variants[{index}]"
+        if not isinstance(variant, dict):
+            report.error(variant_where, "オブジェクトが必要です")
+            continue
+        if _is_non_empty_string(variant.get("id")):
+            if not variant["id"].startswith(f"{question.get('id')}-v"):
+                report.warn(variant_where, f"ID は元の問題のIDに -v1, -v2 を付けます（例 {question.get('id')}-v1）")
+            register_id(variant["id"], variant_where)
+        if "variants" in variant:
+            report.error(variant_where, "言い換え問題の中に variants は書けません")
+        # refs を省くと元の問題の refs を使う
+        _check_question(variant, variant_where, ref_targets, report, is_check=is_check or "refs" not in variant)
+        if _normalize_prompt(TAG_PATTERN.sub("", str(variant.get("prompt", "")))) == base_prompt:
+            report.error(variant_where, "元の問題と同じ問題文です（問い方を変えます）")
+    if all(isinstance(v, dict) and v.get("type") == question.get("type") for v in variants):
+        report.warn(where, "言い換え問題がすべて元の問題と同じ形式です（形式を変えると、問題の見た目でなく知識で答える練習になります）")
 
 
 def _check_question(question, where, ref_targets, report, is_check=False):
@@ -330,13 +371,39 @@ def _check_retired(retired, chapters, final_exam, report):
         retired_ids[entry.get("id")] = entry
         if _is_non_empty_string(entry.get("prompt")):
             retired_prompts[_normalize_prompt(entry["prompt"])] = entry
-    for question, where in _iter_questions(chapters, final_exam):
-        if question.get("id") in retired_ids:
-            report.error(where, "削除した問題（retired）が残っています。教材から削除してください")
+    for parent, parent_where in _iter_questions(chapters, final_exam):
+        for question in _with_variants(parent):
+            where = parent_where if question is parent else f"{parent_where} の言い換え {question.get('id')}"
+            if question.get("id") in retired_ids:
+                report.error(where, "削除した問題（retired）が残っています。教材から削除してください")
+                continue
+            prompt = _normalize_prompt(TAG_PATTERN.sub("", str(question.get("prompt", ""))))
+            if prompt and prompt in retired_prompts:
+                report.warn(where, f"削除した問題 {retired_prompts[prompt].get('id')} と同じ問題文です（学習者が不要とした問題を作り直していないか確認します）")
+
+
+def _check_confusables(confusables, ref_targets, report):
+    """まぎらわしい項目の組：今日の想起で並べて出し、教科書で見比べるよう促す。"""
+    if confusables is None:
+        return
+    if not isinstance(confusables, list):
+        report.error("confusables", "まぎらわしい項目の組の配列が必要です")
+        return
+    for index, group in enumerate(confusables):
+        where = f"confusables[{index}]"
+        if not isinstance(group, dict):
+            report.error(where, "オブジェクトが必要です")
             continue
-        prompt = _normalize_prompt(TAG_PATTERN.sub("", str(question.get("prompt", ""))))
-        if prompt and prompt in retired_prompts:
-            report.warn(where, f"削除した問題 {retired_prompts[prompt].get('id')} と同じ問題文です（学習者が不要とした問題を作り直していないか確認します）")
+        items = group.get("items")
+        if not isinstance(items, list) or len(items) < 2 or len(set(items)) != len(items):
+            report.error(where, "items に、見比べる項目（節ID#項目ID）を重複なく2つ以上並べてください")
+            items = []
+        for key in items:
+            if "#" not in str(key) or key not in ref_targets:
+                report.error(where, f"items のリンク切れ: '{key}'（節ID#項目ID で、ある項目を指します）")
+        if not _is_non_empty_string(group.get("note")):
+            report.error(where, "note に見分けるポイントを1〜2文で書いてください")
+        _check_html(group.get("note"), f"{where}.note", report)
 
 
 def _normalize_prompt(text):
@@ -486,7 +553,16 @@ def validate(content):
                     if isinstance(item.get("body"), str) and not VISUAL_COMPONENT_PATTERN.search(item["body"]):
                         report.warn(item_where, "図や表の部品（sk-figure / sk-nest / sk-flow / sk-compare / sk-cells など）が1つもありません。説明の項目には図解を1つ以上入れます")
                 elif isinstance(item.get("body"), str) and "sk-steps" not in item["body"]:
-                    report.warn(item_where, "例題の解き方は sk-steps（手順）で書きます")
+                    report.warn(item_where, "例題・穴あき例題の解き方は sk-steps（手順）で書きます")
+                if isinstance(item.get("body"), str):
+                    has_blank = bool(BLANK_STEP_PATTERN.search(item["body"]))
+                    if item_type == "faded" and not has_blank:
+                        report.error(item_where, '穴あき例題（faded）は、伏せる段を <li class="sk-blank"> にします（1つ以上）')
+                    if item_type != "faded" and has_blank:
+                        report.warn(item_where, "sk-blank（伏せる段）は穴あき例題（type: faded）でだけ伏せられます")
+                previous_type = items[item_index - 1].get("type", "text") if item_index > 0 and isinstance(items[item_index - 1], dict) else None
+                if item_type == "faded" and previous_type != "example":
+                    report.warn(item_where, "穴あき例題（faded）は、同じ考え方の例題（example）の直後に置きます")
                 if "check" in item and "checks" in item:
                     report.error(item_where, "check と checks の両方があります（checks にまとめます）")
                 checks = item_checks(item)
@@ -507,6 +583,7 @@ def validate(content):
                         continue
                     register_id(check.get("id"), check_where)
                     _check_question(check, check_where, ref_targets, report, is_check=True)
+                    _check_variants(check, check_where, ref_targets, report, register_id, True)
             if text_items == 0:
                 report.error(section_where, "説明の項目（type が text）が1つもありません")
             # 重要度に応じた問題数（目的に近い節ほど問題を増やす）
@@ -532,6 +609,7 @@ def validate(content):
             if isinstance(question, dict):
                 register_id(question.get("id"), where)
             _check_question(question, where, ref_targets, report)
+            _check_variants(question, where, ref_targets, report, register_id, False)
             if isinstance(question, dict) and isinstance(question.get("refs"), list):
                 if question["refs"] and all(ref_chapter(ref) != chapter.get("id") for ref in question["refs"]):
                     report.warn(where, "refs がこの章の節を1つも指していません（章末演習はその章の内容から出します）")
@@ -545,6 +623,7 @@ def validate(content):
         if isinstance(question, dict):
             register_id(question.get("id"), where)
         _check_question(question, where, ref_targets, report)
+        _check_variants(question, where, ref_targets, report, register_id, False)
         if isinstance(question, dict) and isinstance(question.get("refs"), list):
             chapters_used = {ref_chapter(ref) for ref in question["refs"]} - {None}
             if len(chapters_used) < 2:
@@ -555,6 +634,7 @@ def validate(content):
 
     _check_premises(chapters, final_exam, report)
     _check_retired(content.get("retired"), chapters, final_exam, report)
+    _check_confusables(content.get("confusables"), ref_targets, report)
 
     used_fact_ids = {
         fact_id
