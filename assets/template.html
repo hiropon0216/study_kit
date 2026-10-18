@@ -655,12 +655,14 @@ main { padding: 28px 20px 70px; }
   //                streak（日を変えた正解の数）、due（次に出す日）、lastCounted（最後に数えた日）、wrongDay（最後に間違えた日）、
   //                everCorrect（一度でも正解した）、attempts、lapses、lastAnswered、prevStatus（出さない前の状態）
   function createEmptyProgress() {
-    return { version: PROGRESS_VERSION, contentId: content.meta.id, questions: {}, rtRatios: [], memos: {}, lastSectionId: null, stats: { answered: 0, correct: 0 } };
+    return { version: PROGRESS_VERSION, contentId: content.meta.id, questions: {}, memos: {}, lastSectionId: null, stats: { answered: 0, correct: 0 } };
   }
   function normalizeProgress(saved) {
     const base = createEmptyProgress();
     if (!saved || saved.version !== PROGRESS_VERSION) return base; // 形の違う古い履歴は引き継がない
-    return { ...base, ...saved, questions: saved.questions || {}, rtRatios: saved.rtRatios || [], memos: saved.memos || {}, stats: { ...base.stats, ...saved.stats } };
+    // 回答時間の記録（rtRatios）は使わなくなったので捨てる。問題ごとの記録は同じ形のまま引き継ぐ
+    const { rtRatios, ...rest } = saved;
+    return { ...base, ...rest, questions: saved.questions || {}, memos: saved.memos || {}, stats: { ...base.stats, ...saved.stats } };
   }
   function loadProgress() {
     try {
@@ -694,38 +696,19 @@ main { padding: 28px 20px 70px; }
     return el("span", { class: `qs ${s}`, text });
   }
 
-  // 回答時間の基準：選択肢などの文字数から見積もり、学習者のふだんの速さで補正する
-  function baseMs(q) {
-    if (q.type === "fill") return 3000 + Math.max(...q.answer.map((a) => a.length)) * 350;
-    if (q.type === "order") return 4000 + q.options.join("").length * 60;
-    if (q.type === "truefalse") return 2500 + (q.code ? 1500 : 0);
-    return 2000 + q.options.join("").length * 50 + (q.code ? 1500 : 0);
-  }
-  function personalFactor() {
-    const a = progress.rtRatios;
-    if (a.length < 5) return 1;
-    const sorted = [...a].sort((x, y) => x - y);
-    return Math.min(1.6, Math.max(0.7, sorted[Math.floor(sorted.length / 2)]));
-  }
-  // good：速く正解 / hard：遅い正解、またはその日に間違えたあとの正解 / again：不正解
-  function gradeOf(q, correct, rtMs, id) {
-    if (!correct) return "again";
-    const ratio = rtMs / baseMs(q);
-    progress.rtRatios = [...progress.rtRatios, Math.round(ratio * 100) / 100].slice(-20);
-    if (recOf(id).wrongDay === today()) return "hard";
-    return ratio <= personalFactor() ? "good" : "hard";
-  }
-  // クローズまでの道筋：初回に速く正解 → 翌日もう一度正解でクローズ（2回）。それ以外は日を変えて3回正解（間隔 1日 → 3日）
-  function applyResult(id, grade, form = 0) {
+  // 判定は正解・不正解だけ。クローズまでの道筋：
+  //   初回に正解 → 翌日以降の出題日にもう一度正解でクローズ（2回）
+  //   一度でも間違えた → 翌日から日を変えて3回正解でクローズ（間隔 1日 → 1日 → 3日）
+  function applyResult(id, correct, form = 0) {
     const r = { ...recOf(id) };
     const d = today();
     r.attempts = (r.attempts || 0) + 1;
     r.lastAnswered = d;
     if (formsOf(id).length > 1) r.form = form;
     progress.stats.answered += 1;
-    if (grade !== "again") { progress.stats.correct += 1; r.everCorrect = true; }
+    if (correct) { progress.stats.correct += 1; r.everCorrect = true; }
     if (r.status === "excluded") { progress.questions[id] = r; saveProgress(); return r; }
-    if (grade === "again") {
+    if (!correct) {
       if (r.status === "closed") r.reopened = d;
       r.status = "learning";
       r.track = "standard";
@@ -735,7 +718,7 @@ main { padding: 28px 20px 70px; }
       r.lapses = (r.lapses || 0) + 1;
     } else if (r.status === "new") {
       r.status = "learning";
-      r.track = grade === "good" ? "fast" : "standard";
+      r.track = "fast";
       r.streak = 1;
       r.lastCounted = d;
       r.due = addDays(d, 1);
@@ -979,7 +962,7 @@ main { padding: 28px 20px 70px; }
     const form = formIndexOf(id, opts);
     const q = formsOf(id)[form];
     const view = buildView(q, opts.mock || recOf(id).attempts > 0 || opts.retry);
-    const st = { phase: "idle", startedAt: 0, timer: null, advanceTimer: null };
+    const st = { phase: "idle", timer: null, advanceTimer: null };
     const root = el("div", { class: "qcard" });
     const head = el("div", { class: "qhead" });
     const body = el("div");
@@ -1043,7 +1026,6 @@ main { padding: 28px 20px 70px; }
     }
     function showAnswerUi() {
       st.phase = "answer";
-      st.startedAt = performance.now();
       const a = area();
       a.replaceChildren();
       if (q.type === "choice" || q.type === "predict") {
@@ -1075,15 +1057,12 @@ main { padding: 28px 20px 70px; }
       if (st.phase !== "answer") return;
       st.phase = "done";
       const correct = isAnswerCorrect(q, response);
-      const rtMs = performance.now() - st.startedAt;
       lockAnswer(response, correct);
       if (opts.mock) { if (opts.onDone) opts.onDone({ correct, response, form }); return; }
-      let grade = correct ? "good" : "again";
-      let rec = null;
-      if (opts.record) { grade = gradeOf(q, correct, rtMs, id); rec = applyResult(id, grade, form); }
+      const rec = opts.record ? applyResult(id, correct, form) : null;
       renderHead();
-      showResult(correct, grade, rec, response);
-      if (opts.onDone) opts.onDone({ correct, grade, response, form });
+      showResult(correct, rec, response);
+      if (opts.onDone) opts.onDone({ correct, response, form });
     }
     function lockAnswer(response, correct) {
       const a = area();
@@ -1112,12 +1091,12 @@ main { padding: 28px 20px 70px; }
       if (rec.status === "learning" && rec.due) return `次は ${formatDate(rec.due)} に出します。`;
       return null;
     }
-    function showResult(correct, grade, rec, response) {
+    function showResult(correct, rec, response) {
       const box = el("div", { class: `result ${correct ? "ok" : "ng"}` });
       const answerText = correctAnswerText(q, view);
       const answerNode = q.type === "fill" ? el("code", { text: answerText }) : el("span", { style: "white-space:pre-line", text: answerText });
       if (correct) {
-        const note = opts.practice ? "練習なので、記録はしません。" : grade === "hard" ? (recOf(id).wrongDay === today() ? "間違えたあとの正解なので、日を変えてもう一度出します。" : "少し時間がかかったので、日を変えてもう一度確かめます。") : "";
+        const note = opts.practice ? "練習なので、記録はしません。" : rec && rec.wrongDay === today() ? "間違えたあとの正解なので、日を変えてもう一度出します。" : "";
         box.append(el("div", { class: "v" }, ["正解！", el("span", {}, ["答えは ", answerNode])]), note ? el("p", { class: "muted small", text: note }) : null);
       } else {
         box.append(el("div", { class: "v" }, ["ざんねん", el("span", {}, ["正解は ", answerNode])]));
