@@ -274,12 +274,6 @@ main { padding: 28px 20px 70px; }
 .exclude-btn { background: var(--surface); border: 1.5px solid var(--line); border-radius: 99px; padding: 0 10px; font-size: 0.72rem; color: var(--muted); }
 .exclude-btn:hover { border-color: var(--red); color: var(--red); }
 .q-prompt { font-weight: 700; font-size: 1.02rem; margin: 10px 0 0; }
-.think { margin-top: 14px; border: 2px dashed var(--primary); background: var(--lavender); border-radius: 12px; padding: 10px 14px; }
-.think-label { font-size: 0.82rem; color: var(--primary-dark); font-weight: 700; }
-.think-bar { height: 10px; border-radius: 99px; background: var(--surface); border: 1.5px solid var(--ink); overflow: hidden; margin-top: 8px; }
-.think-bar span { display: block; height: 100%; width: 0; background: var(--primary); }
-.think-bar span.run { animation: think 3s linear forwards; }
-@keyframes think { to { width: 100%; } }
 .choices { display: grid; gap: 10px; margin-top: 14px; }
 .choices.grid2 { grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); }
 .choice { display: flex; align-items: center; gap: 12px; text-align: left; width: 100%; min-width: 0; border: 2px solid var(--ink); background: var(--surface); border-radius: 12px; padding: 9px 14px; box-shadow: var(--shadow-sm); font-weight: 700; transition: transform 0.06s, box-shadow 0.06s; }
@@ -541,7 +535,6 @@ main { padding: 28px 20px 70px; }
   // ===== 定数（references/learning-engine.md） =====
   const PROGRESS_VERSION = 3;
   const RUN_SIZE = 10;          // 今日の想起・章末演習・総合演習は1回10問まで
-  const THINK_MS = 3000;        // 選択肢を出す前に、問題文だけを見せる時間
   const ADVANCE_MS = 1200;      // 演習で正解したあと、次の問題へ自動で進むまでの時間
   const RETRY_GAP = 3;          // 演習で間違えた問題は、3問あとにもう一度出す
   const MAX_RETRY = 3;          // 同じ回の中でのくり返しは3回まで
@@ -945,7 +938,7 @@ main { padding: 28px 20px 70px; }
   }
 
   // ===== 問いのカード（すぐ確認・演習・今日の想起で共通） =====
-  // 学習者の操作は「答える」と、間違えたときの「次へ」だけ。考える時間・判定・次の出題日はシステムが決める。
+  // 学習者の操作は「答える」と、間違えたときの「次へ」だけ。判定・次の出題日はシステムが決める。
   // opts.record：学習履歴に記録する / opts.practice：練習（記録しない） / opts.mock：模擬試験（正誤を出さない）
   // opts.onDone(result) / opts.onNext（ある場合は次へボタン。正解なら autoAdvance で自動）/ opts.onExcludeChange(on)
   let keyTarget = null; // 数字キー・Enter を受けるカード（演習の画面だけ）
@@ -962,7 +955,7 @@ main { padding: 28px 20px 70px; }
     const form = formIndexOf(id, opts);
     const q = formsOf(id)[form];
     const view = buildView(q, opts.mock || recOf(id).attempts > 0 || opts.retry);
-    const st = { phase: "idle", timer: null, advanceTimer: null };
+    const st = { phase: "idle", advanceTimer: null };
     const root = el("div", { class: "qcard" });
     const head = el("div", { class: "qhead" });
     const body = el("div");
@@ -978,7 +971,7 @@ main { padding: 28px 20px 70px; }
       const on = isActive(id);
       const phaseBefore = st.phase;
       setExcluded(id, on);
-      clearTimeout(st.timer); clearTimeout(st.advanceTimer);
+      clearTimeout(st.advanceTimer);
       renderHead();
       if (on) {
         body.replaceChildren(el("div", { class: "q-note" }, ["この問題は今後出しません。⚙ 設定の「出さない問題」からいつでも戻せます。"]));
@@ -1002,19 +995,11 @@ main { padding: 28px 20px 70px; }
       body.append(el("div", { class: "answer-area" }));
     }
     const area = () => body.querySelector(".answer-area");
-    // 考える時間：選択肢が要る問題は、問題文だけを見せてから選択肢を出す
-    const needsThink = () => !opts.mock && (q.type === "choice" || q.type === "predict" || q.type === "truefalse");
     function start() {
       if (st.phase !== "idle" || !isActive(id) && !opts.mock) return;
-      if (needsThink()) {
-        st.phase = "think";
-        area().replaceChildren(el("div", { class: "think" }, [el("div", { class: "think-label", text: "まず答えを頭に思い浮かべてください。選択肢はこのあと出ます。" }), el("div", { class: "think-bar" }, [el("span", { class: "run" })])]));
-        st.timer = setTimeout(showAnswerUi, THINK_MS);
-      } else {
-        showAnswerUi();
-      }
+      showAnswerUi();
     }
-    // 予告問題：読む前に問いだけを見せ、読み終えたら答える（考える時間は読んでいるあいだに済んでいる）
+    // 予告問題：読む前に問いだけを見せ、読み終えたら答える
     // 1項目に問題が複数あるとき、2問目からはボタンを出さず、前の問題に答えると答えの欄が出る（opts.previewButton: false）
     function showPreview() {
       st.phase = "preview";
@@ -1159,31 +1144,17 @@ main { padding: 28px 20px 70px; }
       renderBody();
       if (opts.preview) showPreview();
     }
-    // 画面に入ったときから考える時間を数える（予告問題は「読んだので答える」で始める）
+    // すぐに答えの欄を出す（予告問題は「読んだので答える」で出す）
     const api = {
-      el: root, key, start, q,
+      el: root, key, q,
       reveal: () => { if (st.phase === "preview") showAnswerUi(); },
       // 前の問題が出題前に除外されたとき、この問題に「読んだので答える」を付ける
       promote: () => { opts.previewButton = true; if (st.phase === "preview") showPreview(); },
-      stop: () => { clearTimeout(st.timer); clearTimeout(st.advanceTimer); },
+      stop: () => { clearTimeout(st.advanceTimer); },
     };
-    if (opts.startNow) start();
-    else if (!opts.preview) waitingCards.add(api);
+    if (!opts.preview) start();
     return api;
   }
-  // まだ始まっていない問いは、画面に入ったときに始める（スクロールのたびに位置を見る）
-  const waitingCards = new Set();
-  function startVisibleCards() {
-    for (const card of waitingCards) {
-      if (!card.el.isConnected) { waitingCards.delete(card); continue; }
-      const r = card.el.getBoundingClientRect();
-      const visible = Math.min(r.bottom, innerHeight) - Math.max(r.top, 0);
-      if (r.height && visible >= Math.min(r.height * 0.3, innerHeight * 0.3)) { waitingCards.delete(card); card.start(); }
-    }
-  }
-  window.addEventListener("scroll", startVisibleCards, { passive: true });
-  window.addEventListener("resize", startVisibleCards);
-  setInterval(() => { if (waitingCards.size) startVisibleCards(); }, 400);
 
   // ===== 画面の切り替え =====
   // home: ホーム / lesson: 節のページ / run: 今日の想起・演習・模擬試験 / settings: 設定
@@ -1204,7 +1175,6 @@ main { padding: 28px 20px 70px; }
     else if (currentView === "settings") renderSettings();
     renderHeader();
     if (!options.keepScroll) window.scrollTo(0, 0);
-    setTimeout(startVisibleCards, 0);
   }
   function showView(view) {
     if (currentView === "run" && view !== "run" && run && run.kind === "mock" && !run.finished) {
@@ -1484,7 +1454,6 @@ main { padding: 28px 20px 70px; }
     book.replaceChildren(left, el("div", { class: "gutter", "aria-hidden": "true" }), right);
     renderFoot(pages);
     updateLessonStatus();
-    setTimeout(startVisibleCards, 0);
   }
   function renderFoot(pages) {
     const prev = pages[lesson.page - 1];
@@ -1740,7 +1709,6 @@ main { padding: 28px 20px 70px; }
           el("button", { class: "practice", type: "button", text: r.status === "excluded" ? "問題を見る" : "練習で解く（記録しない）", onclick: () => {
             box.classList.remove("compact");
             summary.replaceWith(questionCard(id, { practice: true, label: label(), onDone: () => updateLessonStatus(), onExcludeChange: () => updateLessonStatus() }).el);
-            setTimeout(startVisibleCards, 0);
           } }),
         ]),
       ]);
@@ -1805,7 +1773,6 @@ main { padding: 28px 20px 70px; }
       },
       onExcludeChange: () => updateLessonStatus(),
     }).el);
-    setTimeout(startVisibleCards, 0);
     return box;
   }
   function celebrateSection(section) {
@@ -1965,7 +1932,7 @@ main { padding: 28px 20px 70px; }
     const isMock = run.kind === "mock";
     const isRetry = (run.retries[id] || 0) > 0;
     const card = questionCard(id, {
-      record: !isMock, mock: isMock, retry: isRetry, startNow: true, focus: true, refs: true, autoAdvance: true,
+      record: !isMock, mock: isMock, retry: isRetry, focus: true, refs: true, autoAdvance: true,
       label: el("span", { text: `${isRetry ? "↻ もう一度 ・ " : run.pairs.has(id) ? "⇄ 見分け ・ " : ""}${scopeLabel(id)}` }),
       retryNote: isMock ? null : "このあと、もう一度出します。",
       onDone: (res) => {
