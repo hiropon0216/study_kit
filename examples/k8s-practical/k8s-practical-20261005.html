@@ -388,10 +388,18 @@ main { padding: 28px 20px 70px; }
 .sk-goals::before { content: "この節でわかること"; display: block; font-weight: 700; font-size: 0.8rem; }
 .sk-goals ul, .sk-summary ul { margin: 4px 0 0; padding-left: 1.3em; }
 
+/* 固有名詞の前提の説明：本文には出さず、段落末尾の用語チップから吹き出しで出す（data-term のない sk-premise だけ枠で表示） */
 .sk-premise { background: #e8f0ff; border: 2px solid var(--ink); border-radius: 12px; padding: 12px 18px; margin: 1.2em 0; }
-.sk-premise::before { content: "📘 前提：" attr(data-term) " とは"; display: block; font-weight: 700; margin-bottom: 4px; }
 .sk-premise p { margin: 0.35em 0; font-size: 0.92rem; }
-.lesson-body .sk-premise strong { background: none; color: var(--blue); }
+.term-chips { display: inline-flex; flex-wrap: wrap; gap: 4px 6px; margin-left: 6px; vertical-align: 1px; }
+.term-chip { display: inline-flex; align-items: center; gap: 4px; font: inherit; font-size: 0.74rem; font-weight: 700; line-height: 1.5; padding: 0 9px; border-radius: 99px; border: 1.5px solid var(--blue); background: var(--blue-soft); color: #1f3f8f; cursor: help; white-space: nowrap; }
+.term-chip::before { content: "?"; display: inline-grid; place-items: center; width: 13px; height: 13px; border-radius: 50%; background: var(--blue); color: #fff; font-size: 0.6rem; }
+.term-chip:hover, .term-chip[aria-expanded="true"] { background: var(--blue); color: #fff; }
+.term-chip:hover::before, .term-chip[aria-expanded="true"]::before { background: #fff; color: var(--blue); }
+.term-pop { position: fixed; z-index: 80; width: min(380px, calc(100vw - 24px)); background: var(--surface); border: 2px solid var(--ink); border-radius: 14px; box-shadow: var(--shadow); padding: 12px 16px 10px; font-size: 0.86rem; line-height: 1.7; animation: pop 0.15s ease-out; }
+.term-pop-head { font-weight: 700; font-size: 0.95rem; margin-bottom: 4px; }
+.term-pop-body p { margin: 0.3em 0; }
+.term-pop-body strong { background: none; color: var(--blue); }
 
 .sk-callout { border-radius: 12px; padding: 18px 16px 12px; margin: 1.6em 0 1.2em; position: relative; border: 2px solid var(--ink); }
 .sk-callout::after { position: absolute; left: 14px; top: -12px; font-size: 0.72rem; font-weight: 700; padding: 0 10px; border-radius: 99px; border: 2px solid var(--ink); }
@@ -1164,6 +1172,7 @@ main { padding: 28px 20px 70px; }
   let keyHandler = null;
 
   function render(options = {}) {
+    hideTerm();
     keyHandler = null;
     keyTarget = null;
     app.replaceChildren();
@@ -1212,7 +1221,7 @@ main { padding: 28px 20px 70px; }
   document.getElementById("brand").addEventListener("click", () => showView("home"));
   document.getElementById("gear").addEventListener("click", () => showView("settings"));
   document.addEventListener("keydown", (event) => {
-    if (event.key === "Escape") { closeSearch(); closeToc(); }
+    if (event.key === "Escape") { closeSearch(); closeToc(); hideTerm(); }
     if (event.isComposing || event.ctrlKey || event.metaKey || event.altKey) return;
     const tag = event.target.tagName;
     if (tag === "INPUT" || tag === "TEXTAREA" || (tag === "BUTTON" && event.key === "Enter")) return;
@@ -1428,6 +1437,7 @@ main { padding: 28px 20px 70px; }
     if (book && book.getBoundingClientRect().top < 0) scrollToEl(document.getElementById("lesson"));
   }
   function renderPage() {
+    hideTerm();
     const section = sectionById.get(lesson.sectionId);
     const pages = lessonPages(section);
     const page = pages[lesson.page];
@@ -1582,6 +1592,7 @@ main { padding: 28px 20px 70px; }
     const { item, index } = page;
     const isExample = isWorked(item);
     const body = el("div", { class: "lesson-body", html: item.body });
+    attachTermChips(body);
     const masks = lesson.masked.has(item.id) ? maskKeywords(body, item.id) : 0;
     const blanks = item.kind === "faded" ? blankSteps(body, item.id) : 0;
     left.append(pageHead("教科書", `項目 ${index + 1} / ${section.items.length}`));
@@ -1629,6 +1640,80 @@ main { padding: 28px 20px 70px; }
     const pageIndex = lesson.page;
     for (const id of Object.keys(lesson.retryAt).filter((x) => lesson.retryAt[x] === pageIndex)) right.append(retryBox(section, id));
   }
+  // ===== 用語チップ（固有名詞の前提の説明） =====
+  // 本文の sk-premise は本文の流れから外し、その語が最初に出てくる段落の末尾に用語チップを置く。
+  // チップにカーソルを当てる（キーボードならフォーカス、タッチなら押す）と、前提の説明が吹き出しで出る
+  const termPop = el("div", { class: "term-pop", id: "term-pop", role: "tooltip", hidden: true });
+  document.body.append(termPop);
+  const termState = { chip: null, pinned: false, timer: null };
+  function placeTermPop(chip) {
+    const r = chip.getBoundingClientRect();
+    const w = termPop.offsetWidth;
+    const h = termPop.offsetHeight;
+    const left = Math.max(12, Math.min(r.left, innerWidth - w - 12));
+    const below = r.bottom + 8;
+    const top = below + h > innerHeight - 8 && r.top - h - 8 > 8 ? r.top - h - 8 : below;
+    termPop.style.left = `${left}px`;
+    termPop.style.top = `${top}px`;
+  }
+  function showTerm(chip, pinned = false) {
+    clearTimeout(termState.timer);
+    if (termState.chip && termState.chip !== chip) termState.chip.setAttribute("aria-expanded", "false");
+    termState.chip = chip;
+    termState.pinned = pinned || (termState.pinned && termState.chip === chip);
+    termPop.replaceChildren(el("div", { class: "term-pop-head", text: `${chip.dataset.term} とは` }), el("div", { class: "term-pop-body", html: chip.dataset.html }));
+    termPop.hidden = false;
+    chip.setAttribute("aria-expanded", "true");
+    placeTermPop(chip);
+  }
+  function hideTerm() {
+    clearTimeout(termState.timer);
+    if (termState.chip) termState.chip.setAttribute("aria-expanded", "false");
+    termState.chip = null;
+    termState.pinned = false;
+    termPop.hidden = true;
+  }
+  // カーソルが用語チップから吹き出しへ移るあいだに消えないよう、少し待ってから消す
+  function hideTermSoon() {
+    if (termState.pinned) return;
+    clearTimeout(termState.timer);
+    termState.timer = setTimeout(hideTerm, 200);
+  }
+  termPop.addEventListener("mouseenter", () => clearTimeout(termState.timer));
+  termPop.addEventListener("mouseleave", hideTermSoon);
+  document.addEventListener("click", (event) => {
+    if (termPop.hidden || termPop.contains(event.target) || event.target.closest(".term-chip")) return;
+    hideTerm();
+  });
+  window.addEventListener("scroll", () => { if (termPop.hidden) return; if (termState.pinned) placeTermPop(termState.chip); else hideTerm(); }, { passive: true });
+  window.addEventListener("resize", () => { if (!termPop.hidden) placeTermPop(termState.chip); });
+  function termChip(term, html) {
+    const chip = el("button", { class: "term-chip", type: "button", "aria-expanded": "false", "aria-describedby": "term-pop", "data-term": term, text: term });
+    chip.dataset.html = html;
+    chip.addEventListener("mouseenter", () => showTerm(chip));
+    chip.addEventListener("mouseleave", hideTermSoon);
+    chip.addEventListener("focus", () => showTerm(chip));
+    chip.addEventListener("blur", hideTermSoon);
+    chip.addEventListener("click", () => (termState.chip === chip && termState.pinned ? hideTerm() : showTerm(chip, true)));
+    return chip;
+  }
+  function attachTermChips(body) {
+    const premises = [...body.querySelectorAll(".sk-premise[data-term]")];
+    for (const premise of premises) premise.remove();
+    if (!premises.length) return;
+    const blocks = [...body.querySelectorAll("p, li, dd")].filter((b) => !b.closest("figure, pre, .sk-premise"));
+    for (const premise of premises) {
+      const term = premise.dataset.term;
+      // 「Kubernetes（K8s）」のような語は、括弧の前の部分でも探す
+      const names = [term, term.split(/[（(]/)[0].trim()].filter(Boolean);
+      const block = blocks.find((b) => names.some((name) => b.textContent.includes(name))) || blocks[0];
+      if (!block) { body.prepend(el("p", {}, [termChip(term, premise.innerHTML)])); continue; }
+      let holder = block.querySelector(":scope > .term-chips");
+      if (!holder) { holder = el("span", { class: "term-chips" }); block.append(holder); }
+      holder.append(termChip(term, premise.innerHTML));
+    }
+  }
+
   // 2回目に開いた項目は、本文のキーワード（<strong>）を伏せ字にする。思い出してから押すと開く
   function maskKeywords(body, itemId) {
     let n = 0;
