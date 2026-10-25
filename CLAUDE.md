@@ -5,8 +5,9 @@
 
 ## 開発の進め方
 
-- 設計 → 実装 → テストのハーネス（harness-design / harness-build / harness-test）は使わない。design.md は作らず、仕様の変更は `SKILL.md`・`references/`・`assets/template.html` を直接直す
+- 仕様の変更は `SKILL.md`・`references/`・`assets/template.html` を直接直す
 - 学習エンジンの仕様は `references/learning-engine.md` が正。template.html を変えたら必ずこの文書も合わせる
+- 教材の作り方のレビューは、superpowers の subagent-driven-development にならったループにする（2026-10-25 ユーザー指示）。ゴールは聞き取って要約を確かめ（`references/hearing.md`）、別のサブエージェントが妥当性と分かりやすさを読み、指摘がなくなるまで直す。決まりは `references/review-loop.md`、プロンプトは `references/reviewers/`
 
 ## 横展開の原則
 
