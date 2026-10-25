@@ -5,7 +5,7 @@
   - 問題の explanation（すぐ確認・章末演習・総合演習）
 抜き出さないもの:
   - 表・コード・リスト・用語定義（<p> 以外）、問題文、選択肢
-  - <code> <strong> <a> 以外のタグを含む段落（書き戻しで壊さないため。件数を標準エラーに出す）
+  - <code> <strong> <a> 以外のタグや、バッククォート（`）を含む段落（書き戻しで壊さないため。件数を標準エラーに出す）
 
 出力は段落ごとに `<!-- prose: {ID} -->` の目印を付けた Markdown。
 インラインのタグは Markdown に置き換える（<code>→`x`、<strong>→**x**、<a href>→[x](url)）。
@@ -13,6 +13,7 @@
 
 使い方:
   python extract_prose.py content.json -o prose.md
+  python extract_prose.py content.json --by-chapter -d work/prose   # 章ごと（prose_ch1.md … prose_final.md）に分ける
 """
 
 import argparse
@@ -48,7 +49,8 @@ def explanation_id(question_id):
 
 
 def can_convert(fragment):
-    return set(TAG_NAME_PATTERN.findall(fragment)) <= CONVERTIBLE_TAGS
+    # バッククォートを含む段落は、Markdown のコードの印と区別できず書き戻しで壊れるので対象外にする
+    return set(TAG_NAME_PATTERN.findall(fragment)) <= CONVERTIBLE_TAGS and "`" not in fragment
 
 
 def inline_html_to_markdown(fragment):
@@ -126,6 +128,16 @@ def extract_blocks(content):
     return blocks, skipped
 
 
+def split_content_by_chapter(content):
+    """章ごと（と総合演習）に分けた教材JSONを (名前, 部分の教材JSON) で返す。抜き出しの対象を章ごとに分けるのに使う。"""
+    parts = []
+    for chapter in content["chapters"]:
+        parts.append((chapter["id"], {"chapters": [chapter], "finalExam": []}))
+    if content.get("finalExam"):
+        parts.append(("final", {"chapters": [], "finalExam": content["finalExam"]}))
+    return parts
+
+
 def render_blocks(blocks):
     return "\n\n".join(f"{marker(prose_id)}\n{text}" for prose_id, text in blocks) + "\n"
 
@@ -140,10 +152,28 @@ def parse_blocks(markdown):
 def main():
     parser = argparse.ArgumentParser(description="教科書の地の文と解説文を Markdown に抜き出す")
     parser.add_argument("content", type=Path, help="教材JSONのパス")
-    parser.add_argument("-o", "--output", type=Path, required=True, help="出力する Markdown のパス")
+    parser.add_argument("-o", "--output", type=Path, help="出力する Markdown のパス")
+    parser.add_argument("--by-chapter", action="store_true", help="章ごと（と総合演習）に分けて出力する")
+    parser.add_argument("-d", "--dir", type=Path, help="--by-chapter の出力先フォルダ")
     args = parser.parse_args()
 
     content = json.loads(args.content.read_text(encoding="utf-8"))
+    if args.by_chapter:
+        if not args.dir:
+            parser.error("--by-chapter には -d が必要です")
+        args.dir.mkdir(parents=True, exist_ok=True)
+        all_skipped = []
+        for name, part in split_content_by_chapter(content):
+            blocks, skipped = extract_blocks(part)
+            all_skipped.extend(skipped)
+            path = args.dir / f"prose_{name}.md"
+            path.write_text(render_blocks(blocks), encoding="utf-8")
+            print(f"{len(blocks)}件の段落を抜き出しました: {path}")
+        if all_skipped:
+            print(f"変換できないタグを含むため {len(all_skipped)}件を対象外にしました: {', '.join(all_skipped)}", file=sys.stderr)
+        return 0
+    if not args.output:
+        parser.error("-o か、--by-chapter と -d を指定してください")
     blocks, skipped = extract_blocks(content)
     args.output.parent.mkdir(parents=True, exist_ok=True)
     args.output.write_text(render_blocks(blocks), encoding="utf-8")

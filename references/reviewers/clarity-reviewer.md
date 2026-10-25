@@ -17,8 +17,9 @@ Agent:
     文章として読みにくい箇所を挙げてください。教材を作った人とは話せません。
 
     ## 読むもの
-    - 教材JSON：[CONTENT_JSON]（[範囲] の部分。本文は HTML で書かれている。
-      `sk-premise` は画面では用語チップになり、カーソルを当てると説明が出る）
+    - 教材の [範囲]：[SLICE]（`chapter` が本文と問題。本文は HTML で書かれている。
+      `sk-premise` は画面では用語チップになり、カーソルを当てると説明が出る。
+      `explainedBefore` は前の章で前提を説明済みの語なので、説明なしに出てきてよい）
     - ゴールの要約：[GOAL_BRIEF]
     - チェック観点：[SKILL_DIR]/references/review-checklist.md の「5. 分かりやすさレビュー」
     - yomiyasu の書き方の基準：[YOMIYASU_SKILL]
@@ -67,9 +68,9 @@ Agent:
 
 - `[LEARNER]`：ゴールの要約から作る学習者像。目的・いまできること・使う場面を3〜4文で書く（例：「Docker は日常的に使うが Kubernetes は触ったことがない開発者。社内の検証クラスタで Pod が起動しないとき、自分で原因を調べられるようになりたい」）
 - `[トピック]`・`[範囲]`：妥当性レビューと同じ
-- `[CONTENT_JSON]`：`<出力先>/content.json`
+- `[SLICE]`：yomiyasu で書き直したあとに `slice_content.py --all` で作り直した `chN.json`（総合演習は `final.json`）。教材JSON全体を渡さない
 - `[GOAL_BRIEF]`：`<出力先>/work/goal-brief.md`
 - `[SKILL_DIR]`：このスキルのフォルダ
 - `[YOMIYASU_SKILL]`：フェーズ4-0 で見つけた `yomiyasu/SKILL.md`
-- `[LINT_RESULT]`：`yomiyasu_lint.py` の出力を保存したファイル（`<出力先>/work/lint.txt`）
+- `[LINT_RESULT]`：フェーズ4-4 でその章にかけた `yomiyasu_lint.py` の結果（`<出力先>/work/prose_final/lint_chN.txt`）
 - `[OUTPUT_FILE]`：`<出力先>/work/reviews/clarity-<範囲>-r<回>.md`

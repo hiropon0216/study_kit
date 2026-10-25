@@ -14,9 +14,12 @@ Agent:
 
     ## 読むもの
     - ゴールの要約（これが基準）：[GOAL_BRIEF]
-    - 教材JSON：[CONTENT_JSON]
-    - ファクトシート：[FACTSHEET]
+    - 教材の骨組み：[OUTLINE]（全章の節・項目の見出し、前提の節、要点、各項目で前提を
+      説明した固有名詞（premises）、すべての問題の問題文と正解。本文は入っていない）
     - レビュー記録（これまでの指摘と判断、後回しにした軽微な指摘）：[LEDGER]
+    - 本文の細部を確かめたいときだけ：[SLICES_DIR] の章ごとのファイル（`chN.json`）の
+      該当の節を読む。全部の章を読み通さない（章ごとの本文は、妥当性・分かりやすさの
+      レビューで読み終えている）
 
     ## 見ること
     1. ゴールの達成：各ゴールについて、教材のどこで学び、どの問題（総合演習を含む）で
@@ -59,8 +62,8 @@ Agent:
 ## 埋めるもの
 
 - `[GOAL_BRIEF]`：`<出力先>/work/goal-brief.md`
-- `[CONTENT_JSON]`：`<出力先>/content.json`
-- `[FACTSHEET]`：`<出力先>/factsheet.md`
+- `[OUTLINE]`：`slice_content.py --all` で作り直した `<出力先>/work/slices/outline.json`
+- `[SLICES_DIR]`：`<出力先>/work/slices`
 - `[LEDGER]`：`<出力先>/work/review-ledger.md`
 - `[OUTPUT_FILE]`：`<出力先>/work/reviews/final-all-r1.md`
 

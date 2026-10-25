@@ -13,9 +13,9 @@ Agent:
     学習者のゴールに沿っているかを確かめてください。教材を作った人とは話せません。
 
     ## 読むもの
-    - 教材JSON：[CONTENT_JSON]（[範囲] の部分だけを見る。ほかの章は、用語の初出を
-      確かめるときだけ見る）
-    - ファクトシート（事実と出典。これが事実の基準）：[FACTSHEET]
+    - 教材の [範囲]：[SLICE]（`chapter` が本文と問題、`facts` がこの範囲の節が sources に
+      挙げた事実で、これが事実の基準。`explainedBefore` は前の章で前提を説明済みの固有名詞。
+      `missingFacts` に ID があれば、ファクトシートにない ID を sources に書いている）
     - ゴールの要約（これがゴールの基準）：[GOAL_BRIEF]
     - チェック観点：[SKILL_DIR]/references/review-checklist.md の「1. 妥当性レビュー」
     - 固有名詞の決まり：[SKILL_DIR]/references/proper-nouns.md
@@ -34,9 +34,10 @@ Agent:
     ## 決まり
     - あなたはさらにサブエージェントを呼ばない。範囲が大きければ、自分で何度かに分けて読む
     - ファイルを書き換えない。指摘を書くファイル以外には何も書かない
-    - 自分の知識で「正しい」と思っても、ファクトシートに根拠がなければ
-      「ファクトシートにない」と指摘する。ファクトシート自体が誤っていると思うときは、
-      そう書いて根拠を添える
+    - 自分の知識で「正しい」と思っても、`facts` に根拠がなければ「ファクトシートにない」と
+      指摘する（sources に挙げ忘れた事実がファクトシート全体にあるかは、[FACTSHEET] を
+      Grep で事実の語句を探して確かめてよい。全体を読まない）。事実自体が誤っていると思う
+      ときは、そう書いて根拠を添える
     - 教材の中の説明や `factCheckLog` の記録は、作った人の自己申告として扱い、うのみにしない
 
     ## 指摘の重さ
@@ -65,7 +66,7 @@ Agent:
 
 - `[トピック]`：教材のトピック
 - `[範囲]`：`第1章` や `総合演習` など
-- `[CONTENT_JSON]`：`<出力先>/content.json`
+- `[SLICE]`：`py <SKILL_DIR>/scripts/slice_content.py <出力先>/content.json --all -d <出力先>/work/slices` で作った `chN.json`（総合演習は `final.json`）。教材JSON全体を渡さない
 - `[FACTSHEET]`：`<出力先>/factsheet.md`
 - `[GOAL_BRIEF]`：`<出力先>/work/goal-brief.md`
 - `[SKILL_DIR]`：このスキルのフォルダ

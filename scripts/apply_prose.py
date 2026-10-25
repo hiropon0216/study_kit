@@ -6,6 +6,7 @@
 
 使い方:
   python apply_prose.py content.json prose_revised.md -o content_revised.json
+  python apply_prose.py content.json work/prose/revised_*.md -o content.json   # 章ごとに書き直したものをまとめて書き戻す
 """
 
 import argparse
@@ -59,12 +60,22 @@ def apply_revisions(content, revised_by_id):
 def main():
     parser = argparse.ArgumentParser(description="書き直した地の文・解説文を教材JSONに書き戻す")
     parser.add_argument("content", type=Path, help="書き戻し先の教材JSON（抜き出しに使ったもの）")
-    parser.add_argument("revised", type=Path, help="書き直した Markdown")
+    parser.add_argument("revised", type=Path, nargs="+", help="書き直した Markdown（章ごとに分けたものは複数並べる）")
     parser.add_argument("-o", "--output", type=Path, required=True, help="書き戻した教材JSONの出力先")
     args = parser.parse_args()
 
     content = json.loads(args.content.read_text(encoding="utf-8"))
-    revised_by_id = parse_blocks(args.revised.read_text(encoding="utf-8"))
+    paths = []
+    for path in args.revised:  # PowerShell はワイルドカードを展開しないので、ここで展開する
+        paths.extend(sorted(path.parent.glob(path.name)) if "*" in path.name else [path])
+    revised_by_id = {}
+    for path in paths:
+        blocks = parse_blocks(path.read_text(encoding="utf-8"))
+        duplicated = sorted(blocks.keys() & revised_by_id.keys())
+        if duplicated:
+            print(f"[ERROR] {path}: ほかのファイルと目印が重なっています: {', '.join(duplicated)}")
+            return 1
+        revised_by_id.update(blocks)
 
     expected_ids = {prose_id for prose_id, _ in extract_blocks(content)[0]}
     missing = sorted(expected_ids - revised_by_id.keys())

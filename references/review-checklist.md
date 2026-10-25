@@ -53,7 +53,8 @@
 
 ## 2. 表現の改修
 
-- [ ] yomiyasu の SKILL.md を読み込み、ドメイン `tech` で適用した
+- [ ] 妥当性レビューが終わってから、1回だけ行った（分かりやすさレビューのあとにやり直さない）
+- [ ] 章ごとに抜き出し（`extract_prose.py --by-chapter`）、章ごとのサブエージェントが yomiyasu の SKILL.md を読み込んでドメイン `tech` で適用した（`references/workers/prose-rewriter.md`）
 - [ ] 対象は `extract_prose.py` が抜き出した地の文と解説文だけ
 - [ ] `<!-- prose: ID -->` の目印を消していない・順番を変えていない
 - [ ] `sk-premise` の段落を短くしすぎていない。冒頭の `**何か：**` などの見出しを消していない（前提の説明は情報密度より分かりやすさを優先する）
@@ -74,7 +75,7 @@
 
 ## 4. リント
 
-- [ ] `yomiyasu_lint.py` の出力を `work/lint.txt` に保存した（分かりやすさレビューに渡す）
+- [ ] `yomiyasu_lint.py` の出力を章ごとに `work/prose_final/lint_chN.txt` に保存した（分かりやすさレビューに渡す）
 - [ ] 警告を確認した。残した警告は理由を記録した（段落をまたいだ文末の連続、専門用語の前後の空白など）
 
 ## 5. 分かりやすさレビュー（ループ。`references/reviewers/clarity-reviewer.md`）

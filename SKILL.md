@@ -52,7 +52,7 @@ HTMLの骨子（UI・学習エンジン・保存処理）は `assets/template.ht
 | 0 ヒアリング | 3点を聞き、ゴールを具体的な場面まで聞き取って要約を確かめる | `work/goal-brief.md` | 学習者が要約を「合っている」と言う |
 | 1 章立て | ゴールを決め、章立て表・固有名詞の一覧・「扱わないもの」を作り、ゴール整合レビューのループを回してから出す | 章立て表 | ユーザーの明示的な承認 |
 | 2 リサーチ | 章立てに必要な事実を集める | `factsheet.md` | 全節の事実がそろう |
-| 3 生成 | 教材JSONを作り、HTMLに埋め込む | `content.json` | `validate.py` がエラー0件 |
+| 3 生成 | 章ごとにサブエージェントが同時に書き、`assemble.py` でまとめる。総合演習も別の担当が書く | `content.json` | `validate.py` がエラー0件 |
 | 4 レビュー | 妥当性レビュー（ループ）→表現の改修→意味の差分チェック→リント→分かりやすさレビュー（ループ）→総合レビュー→最終チェック | 改修済み `content.json`・`work/review-ledger.md` | すべての席が完了、または上限で判断を記録した |
 | 5 完成 | 教材HTMLとファクトシートを渡す | `.html` と `_factsheet.md` | ― |
 
@@ -106,7 +106,25 @@ HTMLの骨子（UI・学習エンジン・保存処理）は `assets/template.ht
 
 ## フェーズ3：生成
 
-1. `references/content-schema.md` に従って教材JSONを作り、`<出力先>/content.json` に保存する。書き始める前に `examples/k8s-practical/content.json` を読み、構造・部品の使い方・問題の作り方をそろえる
+章ごとに別のサブエージェント（章の担当）が書き、作成担当がまとめる。章の担当は同時に走らせる。作成担当は本文を自分で書かないので、コンテキストを章の数だけ大きくせずにすむ。
+
+1. 準備（作成担当）
+   - `references/workers/gen-spec-template.md` を埋めて `<出力先>/work/gen-spec.md` に保存する。承認済みの章立て、固有名詞の割り当て、学習者とゴール、リサーチで分かった事実の注意を書く。章の担当は全員このファイルを読んで書く
+   - `<出力先>/work/meta.json` に `meta`（教材ID・教材名・目的・ゴール・知識レベル・対象バージョン・作成日・資格なら `exam`）と、章をまたぐ前提の節（`prerequisites`）を書く（`scripts/assemble.py` の説明）
+2. 章を書く（章の担当。`references/workers/chapter-writer.md`）
+   - 章ごとに `<出力先>/work/chN.json` を書き、`py <SKILL_DIR>/scripts/assemble.py <出力先> --check N` でエラー0件・警告0件にする
+3. まとめる（作成担当）
+
+   ```
+   py <SKILL_DIR>/scripts/assemble.py <出力先>
+   ```
+
+4. 総合演習を書く（総合演習の担当。`references/workers/chapter-writer.md` の後半）
+   - `slice_content.py --scope outline` で骨組みを切り出して渡す。問題数が多いので、ゴールごとに2〜3人で分けてよい
+   - 書き終えたら `assemble.py <出力先> --force` でまとめ直す（レビュー前なので上書きしてよい。以後は `content.json` が正になり、章ごとのファイルからまとめ直さない）
+
+章の担当と総合演習の担当が守る内容は次のとおり（gen-spec.md に要約を書き、詳細は references を読ませる）。
+
    - 教科書と問題は、ファクトシートに載っている事実だけで作る
    - **節は「項目の説明 → その項目のすぐ確認」の繰り返しで作る**（インプットしたら、それに紐づく問題をすぐ出す）。1節は項目3〜6個（説明2〜5個＋必要なら例題1個。重要度 A の節は8個まで）。各節の `sources` にその節の根拠の事実IDを、`keyPoints` に要点を入れる
    - **すぐ確認の数は、章立てで決めた節の重要度に比例させる**（`importance` に A／B／C を入れる）。項目の `checks` に1〜4問。重要な項目ほど多く、別の事実・別の角度から問う
@@ -119,13 +137,15 @@ HTMLの骨子（UI・学習エンジン・保存処理）は `assets/template.ht
    - すぐ確認・章末演習・総合演習は `references/question-guide.md` に従って作る。すぐ確認はその項目を読めば解ける問題、章末演習は1章10問以上
    - 総合演習は節の数×10問以上（4節なら40問以上）。複数の章の知識を組み合わせないと解けない問題にし、フェーズ1のゴールに直結する場面を問う。問題数が多いので、作り方は `references/question-guide.md` の「総合演習」に従って偏りなく散らす
    - 資格トピックでは `meta.exam` に問題数・制限時間（・合格ライン）を入れる（模擬試験が出る）
-2. 検査する
+   - 文章は最初から yomiyasu の基準に近い書き方にする（gen-spec.md の「書き方のルール」）。全文の書き直しはフェーズ4-2で1回だけ行う
 
-   ```
-   py <SKILL_DIR>/scripts/validate.py <出力先>/content.json
-   ```
+最後に教材全体を検査する。
 
-   エラーが0件になるまで直す。警告は内容を確認し、直さない場合は理由をユーザーへの報告に書く。
+```
+py <SKILL_DIR>/scripts/validate.py <出力先>/content.json
+```
+
+エラーが0件になるまで直す。警告は内容を確認し、直さない場合は理由をユーザーへの報告に書く。
 
 ## フェーズ4：レビュー
 
@@ -135,39 +155,46 @@ HTMLの骨子（UI・学習エンジン・保存処理）は `assets/template.ht
 
 - `~/.claude/skills/` の下を検索し、`yomiyasu/SKILL.md` と `yomiyasu/scripts/yomiyasu_lint.py` を探す（同期されたスキルはハッシュ付きのフォルダの下に入っている）。見つからなければここで止め、https://github.com/nanaism/yomiyasu からのインストールを案内する
 - `<出力先>/work/review-ledger.md` を作る（すでにあれば、最後の行から再開する）
+- レビュー担当に渡すファイルを切り出す。教材JSON全体はレビュー担当に渡さない（`references/review-loop.md` の「レビュー担当への渡し方」）
+
+  ```
+  py <SKILL_DIR>/scripts/slice_content.py <出力先>/content.json --all -d <出力先>/work/slices
+  ```
 
 ### 4-1 妥当性レビュー（ループ）
 
-- `references/reviewers/validity-reviewer.md` のプロンプトで、別のサブエージェントに読ませる。章が多いときは章ごと（と総合演習）に分けて同時に走らせる
+- `references/reviewers/validity-reviewer.md` のプロンプトで、章ごと（と総合演習）に別のサブエージェントを立て、同時に走らせる。渡すのは `work/slices/chN.json`（その章の本文・問題と、根拠の事実だけ）
 - 見るのは、事実がファクトシートと合うか、問題の正解が1つに決まるか、各節がゴール（`work/goal-brief.md`）に沿っているか（論点のズレ）、固有名詞の前提の説明
-- 作成担当は指摘を直し、指摘ごとの直し方を修正メモに書く。直す前の `content.json` を `work/content_before_validity_r<回>.json` にコピーしておく
-- `references/reviewers/re-reviewer.md` で再レビューし、重大・要修正が残らなくなるまで繰り返す（上限は r4）
+- 作成担当は指摘を直し、指摘ごとの直し方を修正メモに書く。直す前の `content.json` を `work/content_before_validity_r<回>.json` にコピーしておく。直すときは指摘の場所を Grep で探し、その前後だけを読む
+- `diff_content.py` で直した箇所の差分を作り、`references/reviewers/re-reviewer.md` で再レビューする。重大・要修正が残らなくなるまで繰り返す（上限は r4）。r1 で指摘が0件の章は再レビューしない
 - ファクトシートにない記述は、追加リサーチを1回行って裏を取る。S か A の出典が見つからなければ削除する。どちらにしたかを `factCheckLog` に記録する
 
-### 4-2 表現の改修
+### 4-2 表現の改修（yomiyasu。1回だけ）
 
-1. 地の文と解説文を抜き出す
+妥当性レビューで内容を確かめたあとに、地の文と解説文の全体を1回だけ yomiyasu で書き直す。章ごとに分け、サブエージェントに同時に書き直させる。
+
+1. 章ごとに抜き出す。書き戻す前の `content.json` を `<出力先>/work/content_before_prose.json` にコピーしておく
 
    ```
-   py <SKILL_DIR>/scripts/extract_prose.py <出力先>/content.json -o <出力先>/work/prose.md
+   py <SKILL_DIR>/scripts/extract_prose.py <出力先>/content.json --by-chapter -d <出力先>/work/prose
    ```
 
-2. yomiyasu の SKILL.md を読み込み、ドメイン `tech` で `prose.md` を書き直して `<出力先>/work/prose_revised.md` に保存する
+2. `references/workers/prose-rewriter.md` のプロンプトで、章ごと（と総合演習）にサブエージェントを立てて書き直させる。`prose_chN.md` を読み、`revised_chN.md` に書く
    - `<!-- prose: ID -->` の目印は1つも消さず、順番も変えない
    - 固有名詞の前提の説明（`sk-premise` の段落）は短くまとめず、`**何か：**` などの見出しも残す
    - 表・コード・図・選択肢・用語定義・問題文・ヒント・要点は抜き出されていないので、触らない
-3. 書き戻す
+3. まとめて書き戻す
 
    ```
-   py <SKILL_DIR>/scripts/apply_prose.py <出力先>/content.json <出力先>/work/prose_revised.md -o <出力先>/content.json
+   py <SKILL_DIR>/scripts/apply_prose.py <出力先>/content.json "<出力先>/work/prose/revised_*.md" -o <出力先>/content.json
    ```
-
-   書き戻す前に `content.json` を `<出力先>/work/content_before_prose.json` にコピーしておく。
 
 ### 4-3 意味の差分チェック
 
+章ごとに、書き直す前と後を比べる。
+
 ```
-py <yomiyasu>/scripts/yomiyasu_diff.py <出力先>/work/prose.md <出力先>/work/prose_revised.md --stance=説明
+py <yomiyasu>/scripts/yomiyasu_diff.py <出力先>/work/prose/prose_chN.md <出力先>/work/prose/revised_chN.md --stance=説明
 ```
 
 出力と改修前後の文を見比べ、事実の意味が変わっていないか確認する（「〜の場合がある」が断定になっていないか、条件や数値が落ちていないか）。変わっていたら改修前の意味に戻す。
@@ -175,29 +202,30 @@ py <yomiyasu>/scripts/yomiyasu_diff.py <出力先>/work/prose.md <出力先>/wor
 ### 4-4 リント
 
 ```
-py <SKILL_DIR>/scripts/extract_prose.py <出力先>/content.json -o <出力先>/work/prose_final.md
-py <yomiyasu>/scripts/yomiyasu_lint.py <出力先>/work/prose_final.md > <出力先>/work/lint.txt
+py <SKILL_DIR>/scripts/extract_prose.py <出力先>/content.json --by-chapter -d <出力先>/work/prose_final
+py <yomiyasu>/scripts/yomiyasu_lint.py <出力先>/work/prose_final/prose_chN.md > <出力先>/work/prose_final/lint_chN.txt
 ```
 
-警告が残る場合は修正する。修正しない場合は理由を記録する。`lint.txt` は分かりやすさレビューに渡す。
+警告が残る場合は修正する。修正しない場合は理由を記録する。`lint_chN.txt` は分かりやすさレビューに渡す。
 抜き出したファイルは段落を続けて並べているため、「同一文末が3回以上連続」の警告は別々の段落や解説をまたいで出ることがある。その場合は修正不要として記録する。
 
 ### 4-5 分かりやすさレビュー（ループ）
 
-- `references/reviewers/clarity-reviewer.md` のプロンプトで、別のサブエージェントに**想定する学習者として**読ませる。学習者像は `work/goal-brief.md` の目的・いまできること・使う場面から作る。章が多いときは章ごとに分けて同時に走らせる
+- 書き直した教材から切り出し直す（`slice_content.py --all`）
+- `references/reviewers/clarity-reviewer.md` のプロンプトで、章ごとに別のサブエージェントを立て、**想定する学習者として**読ませる。学習者像は `work/goal-brief.md` の目的・いまできること・使う場面から作る
 - 見るのは、学習者としてつまずく箇所（説明のない語・前提の抜け・説明の飛躍・読み取れない図）、読む負担（認知負荷）、yomiyasu で直しきれなかった AIっぽい日本語
-- 4-1 と同じく、修正メモを書いて直し、`re-reviewer.md` で再レビューする（上限は r4）。再レビューでは、直した文で事実の意味が変わっていないかも確かめる
+- 4-1 と同じく、修正メモを書いて指摘の箇所だけを直し、差分で再レビューする（上限は r4）。yomiyasu の書き直しはやり直さない。再レビューでは、直した文で事実の意味が変わっていないかも確かめる
 
 ### 4-6 総合レビュー
 
-- `references/reviewers/final-reviewer.md` のプロンプトで、別のサブエージェントに教材を通して読ませる。見るのは、各ゴールを学ぶ節と確かめる問題がそろっているか、章をまたいだ前提の抜け、教材全体の論点のズレ、レビュー記録の判断
-- 指摘はまとめて1回で直し、再レビューを1回だけ行う。残った指摘は判断を記録する
+- 切り出し直す（`slice_content.py --all`）。`references/reviewers/final-reviewer.md` のプロンプトで、別のサブエージェントに教材の骨組み（`outline.json`）を通して読ませる。見るのは、各ゴールを学ぶ節と確かめる問題がそろっているか、章をまたいだ前提の抜け、教材全体の論点のズレ、レビュー記録の判断
+- 指摘はまとめて1回で直し、差分で再レビューを1回だけ行う。残った指摘は判断を記録する
 
 ### 4-7 最終チェック
 
 ```
-py <SKILL_DIR>/scripts/extract_prose.py <出力先>/content.json -o <出力先>/work/prose_final.md
-py <yomiyasu>/scripts/yomiyasu_lint.py <出力先>/work/prose_final.md
+py <SKILL_DIR>/scripts/extract_prose.py <出力先>/content.json -o <出力先>/work/prose_last.md
+py <yomiyasu>/scripts/yomiyasu_lint.py <出力先>/work/prose_last.md
 py <SKILL_DIR>/scripts/validate.py <出力先>/content.json
 ```
 

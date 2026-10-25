@@ -8,6 +8,8 @@
 - 仕様の変更は `SKILL.md`・`references/`・`assets/template.html` を直接直す
 - 学習エンジンの仕様は `references/learning-engine.md` が正。template.html を変えたら必ずこの文書も合わせる
 - 教材の作り方のレビューは、superpowers の subagent-driven-development にならったループにする（2026-10-25 ユーザー指示）。ゴールは聞き取って要約を確かめ（`references/hearing.md`）、別のサブエージェントが妥当性と分かりやすさを読み、指摘がなくなるまで直す。決まりは `references/review-loop.md`、プロンプトは `references/reviewers/`
+- 時間とトークンを減らす（2026-10-25 ユーザー指示。品質は落とさない）：章ごとの生成はサブエージェントで同時に行い（`references/workers/`、`scripts/assemble.py`）、レビュー担当には教材JSON全体を渡さず章ごとの切り出し（`scripts/slice_content.py`）と直した箇所の差分（`scripts/diff_content.py`）を渡す。yomiyasu の全文の書き直しは、妥当性レビューのあとに1回だけ、章ごとに同時に行う
+- 作業中にユーザーへ確認を求めない。確認してよいのは削除だけ（2026-10-25 ユーザー指示）
 
 ## 横展開の原則
 
