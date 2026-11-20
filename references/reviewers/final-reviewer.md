@@ -1,6 +1,6 @@
-# 総合レビュー（フェーズ4-6）
+# 総合レビュー（フェーズ5）
 
-妥当性と分かりやすさのループがすべて終わったら、教材を通して読む席を1つ立てる。章ごとのレビューでは見えない、章をまたいだ流れとゴールの達成を見る。ループの決まりは `references/review-loop.md`。
+すべての章と総合演習のパイプラインが終わり、`content.json` にまとめたら、教材を通して読む席を1つ立てる。章ごとのレビューでは見えない、章をまたいだ流れとゴールの達成を見る。ループの決まりは `references/review-loop.md`。
 
 ```
 Agent:
@@ -62,11 +62,11 @@ Agent:
 ## 埋めるもの
 
 - `[GOAL_BRIEF]`：`<出力先>/work/goal-brief.md`
-- `[OUTLINE]`：`slice_content.py --all` で作り直した `<出力先>/work/slices/outline.json`
+- `[OUTLINE]`：`py <SKILL_DIR>/scripts/slice_content.py <出力先>/content.json --all -d <出力先>/work/slices` で作り直した `<出力先>/work/slices/outline.json`
 - `[SLICES_DIR]`：`<出力先>/work/slices`
 - `[LEDGER]`：`<出力先>/work/review-ledger.md`
 - `[OUTPUT_FILE]`：`<出力先>/work/reviews/final-all-r1.md`
 
 ## 総合レビューの指摘の直し方
 
-総合レビューはループを回さない。指摘をまとめて1回で直し、再レビュー（`re-reviewer.md`）を1回だけ行う。それでも残った指摘は `review-loop.md` の「回数の上限」と同じように判断して記録し、渡すときにユーザーへ伝える。
+総合レビューはループを回さない。作成担当が指摘をまとめて1回で `content.json` を直し（指摘の場所を Grep で探し、その前後だけを読む。直す前に `work/history/content_final_r1.json` にコピーする）、再レビュー（`re-reviewer.md`）を1回だけ行う。それでも残った指摘は `review-loop.md` の「回数の上限」と同じように判断して記録し、渡すときにユーザーへ伝える。

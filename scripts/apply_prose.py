@@ -7,6 +7,7 @@
 使い方:
   python apply_prose.py content.json prose_revised.md -o content_revised.json
   python apply_prose.py content.json work/prose/revised_*.md -o content.json   # 章ごとに書き直したものをまとめて書き戻す
+  python apply_prose.py work/ch3.json work/prose/revised_ch3.md -o work/ch3.json   # 章ごとのファイルにも書き戻せる
 """
 
 import argparse
@@ -14,6 +15,8 @@ import json
 import re
 import sys
 from pathlib import Path
+
+import content_io
 
 from extract_prose import (
     PARAGRAPH_PATTERN,
@@ -64,7 +67,7 @@ def main():
     parser.add_argument("-o", "--output", type=Path, required=True, help="書き戻した教材JSONの出力先")
     args = parser.parse_args()
 
-    content = json.loads(args.content.read_text(encoding="utf-8"))
+    original, content = content_io.load(args.content)
     paths = []
     for path in args.revised:  # PowerShell はワイルドカードを展開しないので、ここで展開する
         paths.extend(sorted(path.parent.glob(path.name)) if "*" in path.name else [path])
@@ -94,8 +97,7 @@ def main():
 
     for warning in apply_revisions(content, revised_by_id):
         print(f"[WARN]  {warning}")
-    args.output.parent.mkdir(parents=True, exist_ok=True)
-    args.output.write_text(json.dumps(content, ensure_ascii=False, indent=2) + "\n", encoding="utf-8")
+    content_io.save(args.output, original)
     print(f"書き戻した教材JSONを出力しました: {args.output}")
     return 0
 

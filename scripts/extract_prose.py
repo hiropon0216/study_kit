@@ -14,6 +14,7 @@
 使い方:
   python extract_prose.py content.json -o prose.md
   python extract_prose.py content.json --by-chapter -d work/prose   # 章ごと（prose_ch1.md … prose_final.md）に分ける
+  python extract_prose.py work/ch3.json -o work/prose/prose_ch3.md  # 章ごとのファイル・総合演習のファイルからも抜き出せる
 """
 
 import argparse
@@ -22,6 +23,8 @@ import json
 import re
 import sys
 from pathlib import Path
+
+import content_io
 
 PARAGRAPH_PATTERN = re.compile(r"<p>(.*?)</p>", re.DOTALL)
 CODE_PATTERN = re.compile(r"<code>(.*?)</code>", re.DOTALL)
@@ -157,7 +160,7 @@ def main():
     parser.add_argument("-d", "--dir", type=Path, help="--by-chapter の出力先フォルダ")
     args = parser.parse_args()
 
-    content = json.loads(args.content.read_text(encoding="utf-8"))
+    content = content_io.load(args.content)[1]
     if args.by_chapter:
         if not args.dir:
             parser.error("--by-chapter には -d が必要です")

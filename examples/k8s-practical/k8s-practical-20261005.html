@@ -338,6 +338,8 @@ main { padding: 28px 20px 70px; }
 .map button { display: grid; grid-template-columns: 20px minmax(0, 1fr) auto; gap: 8px; align-items: center; text-align: left; border: none; border-bottom: 1.5px dashed var(--line); background: none; padding: 8px 2px; font-size: 0.8rem; }
 .map button:last-child { border-bottom: none; }
 .keypoints { margin: 0; padding-left: 1.2em; font-size: 0.85rem; }
+.recall-box { margin: 0; }
+.recall-box p { margin: 0 0 8px; font-size: 0.85rem; color: var(--muted); }
 .memo { width: 100%; min-height: 110px; resize: vertical; background: var(--surface); border: 2px solid var(--ink); border-radius: 10px; padding: 8px 10px; font-size: 0.85rem; }
 
 /* ===== 演習（今日の想起・章末演習・総合演習・模擬試験） ===== */
@@ -1866,11 +1868,25 @@ main { padding: 28px 20px 70px; }
     showToast("🔓 この節の問題に全問正解しました。次の節へ進めます。");
   }
 
+  // まとめの要点：先に何も見ずに思い出させてから開く（自由想起）。節を開いているあいだは開いたまま。記録しない
+  function keyPointsBlock(section) {
+    const list = el("ul", { class: "keypoints" }, section.keyPoints.map((p) => el("li", { html: p })));
+    const key = `${section.id}:keypoints`;
+    if (lesson.revealed.has(key)) return list;
+    const button = el("button", { class: "blank-btn", type: "button", text: `？ この節の要点を${section.keyPoints.length}つ思い出してから、押して開く` });
+    const box = el("div", { class: "recall-box" }, [
+      el("p", { text: "何も見ずに、この節で読んだことを頭の中で（または下のメモ欄に）書き出してみましょう。思い出そうとすること自体が、記憶を強くします。" }),
+      button,
+    ]);
+    button.addEventListener("click", () => { lesson.revealed.add(key); box.replaceWith(list); });
+    return box;
+  }
+
   // まとめ：左に要点と出典、右に問題の状態・まだ解き直していない問題・次の節へ
   function fillEndPage(section, left, right) {
     const sources = (section.sources || []).map((id) => factById.get(id)).filter(Boolean);
     left.append(pageHead("教科書", "まとめ"), el("h2", { text: "この節の要点" }));
-    if (section.keyPoints && section.keyPoints.length) left.append(el("ul", { class: "keypoints" }, section.keyPoints.map((p) => el("li", { html: p }))));
+    if (section.keyPoints && section.keyPoints.length) left.append(keyPointsBlock(section));
     if (sources.length) left.append(el("details", { class: "sources" }, [
       el("summary", { text: `参考出典（${sources.length}件）` }),
       el("ul", {}, sources.map((fact) => el("li", {}, [el("span", { class: "rank", text: fact.rank }), fact.claim + " ", el("a", { href: fact.url, target: "_blank", rel: "noopener", text: "出典" })]))),

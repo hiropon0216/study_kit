@@ -13,6 +13,7 @@
 使い方:
   python diff_content.py work/content_before_validity_r1.json content.json -o work/reviews/validity-ch1-r2-diff.md
   python diff_content.py before.json after.json --scope ch1 -o diff.md    # 第1章（と、その章の事実）だけ
+  python diff_content.py work/history/ch1_validity_r1.json work/ch1.json -o diff.md   # 章ごとのファイルどうしでもよい
 """
 
 import argparse
@@ -20,9 +21,12 @@ import json
 import sys
 from pathlib import Path
 
+import content_io
+
 
 def load_json(path):
-    return json.loads(path.read_text(encoding="utf-8"))
+    """教材JSON・章ごとのファイル（work/chN.json）・総合演習のファイルのどれでも読む。"""
+    return content_io.load(path)[1]
 
 
 def dump(value):

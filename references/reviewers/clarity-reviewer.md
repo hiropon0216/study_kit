@@ -1,6 +1,6 @@
-# 分かりやすさレビュー（フェーズ4-5）
+# 分かりやすさレビュー（章のパイプライン）
 
-yomiyasu で表現を直したあと、新しいサブエージェントに**想定する学習者として**読ませる。章が多いときは章ごとに分けて同時に走らせる。ループの決まりは `references/review-loop.md`。
+その章の yomiyasu の書き直しと意味の確認が済んだら、その章だけで新しいサブエージェントに**想定する学習者として**読ませる（ほかの章を待たない）。ループの決まりは `references/review-loop.md`。
 
 ```
 Agent:
@@ -68,9 +68,9 @@ Agent:
 
 - `[LEARNER]`：ゴールの要約から作る学習者像。目的・いまできること・使う場面を3〜4文で書く（例：「Docker は日常的に使うが Kubernetes は触ったことがない開発者。社内の検証クラスタで Pod が起動しないとき、自分で原因を調べられるようになりたい」）
 - `[トピック]`・`[範囲]`：妥当性レビューと同じ
-- `[SLICE]`：yomiyasu で書き直したあとに `slice_content.py --all` で作り直した `chN.json`（総合演習は `final.json`）。教材JSON全体を渡さない
+- `[SLICE]`：書き直しのあとに `assemble.py <出力先> --slice N -o <出力先>/work/slices/chN.json` で作り直したもの（総合演習は `--slice final`）。教材JSON全体を渡さない
 - `[GOAL_BRIEF]`：`<出力先>/work/goal-brief.md`
 - `[SKILL_DIR]`：このスキルのフォルダ
-- `[YOMIYASU_SKILL]`：フェーズ4-0 で見つけた `yomiyasu/SKILL.md`
-- `[LINT_RESULT]`：フェーズ4-4 でその章にかけた `yomiyasu_lint.py` の結果（`<出力先>/work/prose_final/lint_chN.txt`）
+- `[YOMIYASU_SKILL]`：準備で見つけた `yomiyasu/SKILL.md`
+- `[LINT_RESULT]`：章の担当が意味の確認のときに保存した `yomiyasu_lint.py` の結果（`<出力先>/work/prose_final/lint_chN.txt`）
 - `[OUTPUT_FILE]`：`<出力先>/work/reviews/clarity-<範囲>-r<回>.md`

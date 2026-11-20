@@ -1,6 +1,6 @@
-# yomiyasu で書き直す担当（フェーズ4-2）
+# yomiyasu で書き直す担当（章のパイプライン）
 
-妥当性レビューで内容を確かめたあとに、1回だけ行う。章ごとに新しいサブエージェントを立て、同時に走らせる。章ごとに別のファイルを書くので衝突しない。
+章の妥当性レビューのループが終わったら、その章だけで1回だけ行う（ほかの章を待たない）。章ごとに新しいサブエージェントを立てる。章ごとに別のファイルを書くので衝突しない。
 
 ```
 Agent:
@@ -30,6 +30,19 @@ Agent:
 
 ## 埋めるもの
 
-- `[YOMIYASU_SKILL]`：フェーズ4-0 で見つけた `yomiyasu/SKILL.md`
-- `[PROSE_FILE]`：`<出力先>/work/prose/prose_chN.md`（総合演習は `prose_final.md`）
-- `[OUTPUT_FILE]`：`<出力先>/work/prose/revised_chN.md`（総合演習は `revised_final.md`）
+- `[YOMIYASU_SKILL]`：準備で見つけた `yomiyasu/SKILL.md`
+- `[PROSE_FILE]`：`<出力先>/work/prose/prose_chN.md`（総合演習は `prose_final_K.md`）。作成担当が次のコマンドで作る。書き戻す前の章のファイルは `work/history/chN_prose.json` にコピーしておく
+
+  ```
+  py <SKILL_DIR>/scripts/extract_prose.py <出力先>/work/chN.json -o <出力先>/work/prose/prose_chN.md
+  ```
+
+- `[OUTPUT_FILE]`：`<出力先>/work/prose/revised_chN.md`（総合演習は `revised_final_K.md`）
+
+## 終わったら（作成担当）
+
+```
+py <SKILL_DIR>/scripts/apply_prose.py <出力先>/work/chN.json <出力先>/work/prose/revised_chN.md -o <出力先>/work/chN.json
+```
+
+書き戻したら、章の担当に SendMessage で「書き直しのあとに意味を確かめる」を頼む（`references/workers/chapter-writer.md`）。

@@ -1,5 +1,9 @@
 # フェーズ2：ファクトシートの書式と信頼度基準
 
+## 置き場所
+
+ファクトシートは章ごとに分け、章のリサーチ担当（`references/workers/researcher.md`）が `<出力先>/work/facts/chN.md` に書く。章をまたいで使う事実（教材全体の前提など）があれば `<出力先>/factsheet.md` に書いてよい。`scripts/assemble.py` は両方を読む。フェーズ6では `build_html.py --factsheet` が教材JSONから1枚のファクトシートを作り直す。
+
 ## 書式
 
 ファイルの冒頭に、教材名・作成日・対象バージョン（バージョンで挙動が変わるトピックのとき）を書く。
@@ -12,13 +16,14 @@
 
 | ID | 主張（1行） | 出典URL | 信頼度 | 使用箇所 |
 |---|---|---|---|---|
-| F-001 | Deployment は ReplicaSet を介して Pod を管理する | https://kubernetes.io/docs/concepts/workloads/controllers/deployment/ | S | 1.2 |
+| F-1001 | Deployment は ReplicaSet を介して Pod を管理する | https://kubernetes.io/docs/concepts/workloads/controllers/deployment/ | S | 1.2 |
 ```
 
-- ID は `F-001` から連番。削除しても番号を詰めない
+- ID は章ごとに `F-[章番号]001` から連番（第1章は F-1001〜、第12章は F-12001〜）。章どうしで重ならない。削除しても番号を詰めない
+- `<出力先>/factsheet.md` に書く章をまたぐ事実は `F-001` からの連番にする
 - 主張は1行で、検証できる形で書く（「〜は便利」のような評価は書かない）
 - 出典URLは、主張が書いてあるページそのもの（トップページではなく）
-- 使用箇所はフェーズ1の節番号。フェーズ5では `build_html.py --factsheet` が教材JSONから作り直す
+- 使用箇所はフェーズ1の節番号。フェーズ6では `build_html.py --factsheet` が教材JSONから作り直す
 
 ## 固有名詞の前提の事実
 
@@ -28,7 +33,7 @@
 - 使用箇所には、その語の初出の節を書く
 
 ```markdown
-| F-019 | Kubernetes はコンテナ化されたワークロードとサービスを管理する、オープンソースのプラットフォームである | https://kubernetes.io/docs/concepts/overview/ | S | 1.1 |
+| F-1019 | Kubernetes はコンテナ化されたワークロードとサービスを管理する、オープンソースのプラットフォームである | https://kubernetes.io/docs/concepts/overview/ | S | 1.1 |
 ```
 
 ## 信頼度
@@ -44,12 +49,12 @@
 
 ## 教材JSONへの取り込み
 
-フェーズ3で、ファクトシートの各行を教材JSONの `factsheet` 配列に入れる（`id`・`claim`・`url`・`rank`、B は `backedBy`）。
-以降は教材JSONの `factsheet` を正とし、フェーズ5で md を作り直す。
+`assemble.py` が、ファクトシートの各行を教材JSONの `factsheet` 配列に入れる（`id`・`claim`・`url`・`rank`、B は `backedBy`）。
+以降は教材JSONの `factsheet` を正とし、フェーズ6で md を作り直す。
 
-## 妥当性レビューで追加・削除したとき（フェーズ4）
+## 妥当性レビューで追加・削除したとき
 
-教材JSONの `factCheckLog` に記録する。フェーズ5でファクトシートの末尾に「事実チェックの記録」として出力される。
+教材JSONの `factCheckLog` に記録する。フェーズ6でファクトシートの末尾に「事実チェックの記録」として出力される。
 
 ```json
 "factCheckLog": [

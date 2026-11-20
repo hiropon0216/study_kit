@@ -1,6 +1,6 @@
-# 妥当性レビュー（フェーズ4-1）
+# 妥当性レビュー（章のパイプライン）
 
-教材JSONができたら、新しいサブエージェントに読ませる。章が多いときは章ごとに分けて同時に走らせる。ループの決まりは `references/review-loop.md`。
+章の担当が章を書き終え `--check` を通したら、その章だけで新しいサブエージェントに読ませる（ほかの章を待たない）。ループの決まりは `references/review-loop.md`。
 
 ```
 Agent:
@@ -66,8 +66,8 @@ Agent:
 
 - `[トピック]`：教材のトピック
 - `[範囲]`：`第1章` や `総合演習` など
-- `[SLICE]`：`py <SKILL_DIR>/scripts/slice_content.py <出力先>/content.json --all -d <出力先>/work/slices` で作った `chN.json`（総合演習は `final.json`）。教材JSON全体を渡さない
-- `[FACTSHEET]`：`<出力先>/factsheet.md`
+- `[SLICE]`：`py <SKILL_DIR>/scripts/assemble.py <出力先> --slice N -o <出力先>/work/slices/chN.json` で作る（総合演習は `--slice final -o …/final.json`）。教材JSON全体を渡さない
+- `[FACTSHEET]`：`<出力先>/work/facts/`（章ごとのファクトシートのフォルダ。Grep で引く）
 - `[GOAL_BRIEF]`：`<出力先>/work/goal-brief.md`
 - `[SKILL_DIR]`：このスキルのフォルダ
 - `[OUTPUT_FILE]`：`<出力先>/work/reviews/validity-<範囲>-r<回>.md`

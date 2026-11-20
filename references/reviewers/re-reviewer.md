@@ -50,15 +50,15 @@ Agent:
 
 - `[席]`：`goal`・`validity`・`clarity`・`final`
 - `[FINDINGS_FILE]`：前回の指摘のファイル（初回なら r1、以降は前回の再レビューの「直っていない」「新しく壊れたもの」）
-- `[DIFF_FILE]`：次のコマンドで作る。直す前の教材JSONは、直し始める前に `<出力先>/work/content_before_<席>_r<回>.json` へコピーしておく
+- `[DIFF_FILE]`：次のコマンドで作る。直す前の章のファイルは、直し始める前に `<出力先>/work/history/chN_<席>_r<回>.json` へコピーしておく（総合演習は `final_K.json`、総合レビューは `content.json`）
 
   ```
-  py <SKILL_DIR>/scripts/diff_content.py <出力先>/work/content_before_<席>_r<回>.json <出力先>/content.json --scope <章ID> -o <出力先>/work/reviews/<席>-<範囲>-r<回>-diff.md
+  py <SKILL_DIR>/scripts/diff_content.py <出力先>/work/history/chN_<席>_r<回>.json <出力先>/work/chN.json -o <出力先>/work/reviews/<席>-<範囲>-r<回>-diff.md
   ```
 
-- `[FIX_NOTE]`：`<出力先>/work/reviews/<席>-<範囲>-r<回>-fix.md`（作成担当が、指摘の # ごとにどう直したか、直さなかったならなぜかを書く）
-- `[FACTSHEET]`：`<出力先>/factsheet.md`
+- `[FIX_NOTE]`：`<出力先>/work/reviews/<席>-<範囲>-r<回>-fix.md`（直した担当が、指摘の # ごとにどう直したか、直さなかったならなぜかを書く）
+- `[FACTSHEET]`：`<出力先>/work/facts/`（章ごとのファクトシートのフォルダ）
 - `[GOAL_BRIEF]`：`<出力先>/work/goal-brief.md`
 - `[OUTPUT_FILE]`：`<出力先>/work/reviews/<席>-<範囲>-r<回>.md`
 
-フェーズ1のゴール整合レビューでは、差分の代わりに章立て案の直す前・直した後のファイルを渡す（章立て案は小さいので、そのままでよい）。
+フェーズ1のゴール整合レビューは再レビューをしない（直した章立てをユーザーが承認のときに読むため）。
